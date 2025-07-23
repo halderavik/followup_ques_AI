@@ -1,0 +1,168 @@
+{
+	"info": {
+		"_postman_id": "survey-intelligence-api",
+		"name": "Survey Intelligence API",
+		"description": "API for generating intelligent follow-up questions for survey responses using DeepSeek AI",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "API Information",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						""
+					]
+				},
+				"description": "Get API information and available endpoints"
+			},
+			"response": []
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/health",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if the API is running and healthy"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Question Types",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/question-types",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"question-types"
+					]
+				},
+				"description": "Get all supported follow-up question types"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Follow-up Questions - Basic",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"What did you think of our service?\",\n  \"response\": \"The service was good but could be faster.\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-followup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-followup"
+					]
+				},
+				"description": "Generate follow-up questions for a basic survey response"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Follow-up Questions - With Types",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"How satisfied are you with our product?\",\n  \"response\": \"I'm satisfied with the features but the price is too high.\",\n  \"allowed_types\": [\"reason\", \"example\", \"impact\"]\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-followup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-followup"
+					]
+				},
+				"description": "Generate follow-up questions with specific allowed types"
+			},
+			"response": []
+		},
+
+		{
+			"name": "Generate Follow-up Questions - Invalid Data",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"\",\n  \"response\": \"\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-followup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-followup"
+					]
+				},
+				"description": "Test validation error - should return 422"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		}
+	]
+} 

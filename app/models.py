@@ -1,0 +1,36 @@
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from .question_types import QuestionType
+
+class GenerateFollowupRequest(BaseModel):
+    """
+    Request model for generating follow-up questions.
+
+    Args:
+        question (str): The original survey question.
+        response (str): The user's answer to the survey question.
+        allowed_types (Optional[List[QuestionType]]): Optional list of allowed follow-up question types.
+    """
+    question: str = Field(..., description="The original survey question.")
+    response: str = Field(..., description="The user's answer to the survey question.")
+    allowed_types: Optional[List[QuestionType]] = Field(None, description="Optional list of allowed follow-up question types.")
+
+class FollowupQuestion(BaseModel):
+    """
+    Model for a generated follow-up question.
+
+    Args:
+        type (QuestionType): The type of follow-up question.
+        text (str): The follow-up question text.
+    """
+    type: QuestionType
+    text: str
+
+class GenerateFollowupResponse(BaseModel):
+    """
+    Response model for generated follow-up questions.
+
+    Args:
+        followups (List[FollowupQuestion]): List of generated follow-up questions.
+    """
+    followups: List[FollowupQuestion] 

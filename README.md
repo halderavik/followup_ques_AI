@@ -1,0 +1,125 @@
+# Survey Intelligence API - MVP
+
+## Overview
+This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides 2-3 contextually relevant follow-up questions per response.
+
+## Features
+- AI-powered question generation (DeepSeek LLM)
+- 6 core follow-up question types (reason, clarification, elaboration, example, impact, comparison)
+- Simple REST API (JSON)
+- No authentication required for users
+- Comprehensive error handling
+- Intelligent follow-up question generation
+
+## Tech Stack
+- Python 3.9+
+- Flask 2.3.3
+- Pydantic 2.4.2
+- Requests 2.31.0
+- python-dotenv
+- pytest, Black, Flake8
+
+## Setup Instructions
+1. Clone the repository and navigate to the project directory.
+2. Create a Python 3.11 virtual environment:
+   ```bash
+   py -3.11 -m venv venv
+   ```
+3. Activate the virtual environment:
+   ```bash
+   # Windows PowerShell
+   .\venv\Scripts\Activate.ps1
+   
+   # Windows Command Prompt
+   .\venv\Scripts\activate.bat
+   
+   # Linux/Mac
+   source venv/bin/activate
+   ```
+4. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+5. Create a `.env` file in the project root with your DeepSeek API key:
+   ```env
+   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   ```
+6. Run the Flask app:
+   ```bash
+   python main.py
+   ```
+7. Test the API:
+   ```bash
+   # API information
+   curl http://localhost:5000/
+   
+   # Health check
+   curl http://localhost:5000/health
+   
+   # Get question types
+   curl http://localhost:5000/question-types
+   
+   # Generate follow-up questions
+   curl -X POST http://localhost:5000/generate-followup \
+     -H "Content-Type: application/json" \
+     -d '{"question": "What did you think?", "response": "It was good."}'
+   ```
+
+## Project Structure
+- `app/` - Main application code
+  - `__init__.py` - Flask app factory
+  - `routes.py` - API endpoints
+  - `models.py` - Pydantic data models
+  - `question_types.py` - Question type enums
+  - `error_models.py` - Error response models
+  - `deepseek_service.py` - DeepSeek LLM integration
+  - `log_config.py` - Logging configuration
+- `tests/` - Unit and integration tests
+- `requirements.txt` - Python dependencies
+- `.env` - Environment variables (DeepSeek API key)
+- `README.md` - Project documentation
+- `Survey_Intelligence_API.postman_collection.json` - Postman collection
+- `POSTMAN_TESTING_GUIDE.md` - Testing guide
+- `run_tests.py` - Custom test runner
+
+## API Endpoints
+
+### GET `/`
+Returns API information and available endpoints.
+
+### GET `/health`
+Health check endpoint. Returns `{"status": "ok"}`.
+
+### GET `/question-types`
+Returns all supported follow-up question types.
+
+### POST `/generate-followup`
+Generates intelligent follow-up questions based on survey responses.
+
+**Request Body:**
+```json
+{
+  "question": "What did you think of our service?",
+  "response": "The service was good but could be faster.",
+  "allowed_types": ["reason", "impact"]  // Optional
+}
+```
+
+**Response:**
+```json
+{
+  "followups": [
+    {
+      "text": "What specifically about the service made you feel it could be faster?",
+      "type": "reason"
+    },
+    {
+      "text": "How did the speed of the service affect your overall experience?",
+      "type": "impact"
+    }
+  ]
+}
+```
+
+## License
+MIT (or specify as appropriate) 
