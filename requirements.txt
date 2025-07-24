@@ -4,4 +4,5 @@ requests==2.31.0
 python-dotenv
 pytest
 black
-flake8 
+flake8
+gunicorn==21.2.0 
