@@ -44,6 +44,8 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
    ```env
    DEEPSEEK_API_KEY=your_deepseek_api_key_here
    ```
+   
+   **⚠️ Security Note**: Never commit your actual API key to Git. The `.env` file is already in `.gitignore`.
 6. Run the Flask app:
    ```bash
    python main.py

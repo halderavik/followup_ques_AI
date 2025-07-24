@@ -398,8 +398,8 @@ generateFollowupQuestions(
 
 For technical support or questions about integration:
 - **Documentation**: This API.md file
-- **GitHub**: https://github.com/halderavik/followup_ques_AI
 - **Live API**: https://follow-up-question-f00b29aae45c.herokuapp.com/
+- **GitHub Repository**: https://github.com/halderavik/followup_ques_AI
 
 ## 🚀 Getting Started Checklist
 

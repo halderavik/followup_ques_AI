@@ -23,7 +23,7 @@ Replace `your-app-name` with your desired app name (must be unique across Heroku
 
 ### 3. Set Environment Variables
 ```bash
-heroku config:set DEEPSEEK_API_KEY=sk-9d57f9501955427c83a0a7e50bf5ec72
+heroku config:set DEEPSEEK_API_KEY=your_deepseek_api_key_here
 ```
 
 ### 4. Deploy to Heroku
