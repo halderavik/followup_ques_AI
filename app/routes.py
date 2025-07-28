@@ -107,19 +107,25 @@ def performance():
     Returns:
         JSON: Performance metrics and cache statistics.
     """
-    from .deepseek_service import DeepSeekService
-    service = DeepSeekService()
-    
-    # Clean up cache
-    service.cleanup_cache()
-    
-    return jsonify({
-        "cache_size": len(service.cache),
-        "cache_ttl": service.cache_ttl,
-        "timeout": service.TIMEOUT,
-        "max_tokens": service.MAX_TOKENS,
-        "retries": service.RETRIES
-    }), 200
+    try:
+        from .deepseek_service import DeepSeekService
+        service = DeepSeekService()
+        
+        # Clean up cache
+        service.cleanup_cache()
+        
+        return jsonify({
+            "cache_size": len(service.cache),
+            "cache_ttl": service.cache_ttl,
+            "timeout": service.TIMEOUT,
+            "max_tokens": service.MAX_TOKENS,
+            "retries": service.RETRIES
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to get performance metrics",
+            "details": str(e)
+        }), 500
 
 @bp.route('/generate-reason', methods=['POST'])
 def generate_reason():

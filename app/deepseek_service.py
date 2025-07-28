@@ -41,7 +41,7 @@ class DeepSeekService:
         retry_strategy = Retry(
             total=self.RETRIES,
             status_forcelist=[429, 500, 502, 503, 504],
-            method_whitelist=["POST"],
+            allowed_methods=["POST"],  # Updated from method_whitelist
             backoff_factor=0.5
         )
         
