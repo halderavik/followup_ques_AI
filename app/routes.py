@@ -24,13 +24,15 @@ def root():
             "health": "/health",
             "question_types": "/question-types",
             "generate_followup": "/generate-followup",
-            "generate_reason": "/generate-reason"
+            "generate_reason": "/generate-reason",
+            "performance": "/performance"
         },
         "usage": {
             "health": "GET /health - Check API status",
             "question_types": "GET /question-types - Get available question types",
             "generate_followup": "POST /generate-followup - Generate follow-up questions",
-            "generate_reason": "POST /generate-reason - Generate single reason-based question"
+            "generate_reason": "POST /generate-reason - Generate single reason-based question",
+            "performance": "GET /performance - Get performance metrics"
         }
     }), 200
 
@@ -96,6 +98,28 @@ def generate_followup():
             detail=f"Internal server error: {exc}",
             code="internal_error"
         ).dict()), 500
+
+@bp.route('/performance', methods=['GET'])
+def performance():
+    """
+    Get API performance metrics.
+
+    Returns:
+        JSON: Performance metrics and cache statistics.
+    """
+    from .deepseek_service import DeepSeekService
+    service = DeepSeekService()
+    
+    # Clean up cache
+    service.cleanup_cache()
+    
+    return jsonify({
+        "cache_size": len(service.cache),
+        "cache_ttl": service.cache_ttl,
+        "timeout": service.TIMEOUT,
+        "max_tokens": service.MAX_TOKENS,
+        "retries": service.RETRIES
+    }), 200
 
 @bp.route('/generate-reason', methods=['POST'])
 def generate_reason():
