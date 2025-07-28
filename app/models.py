@@ -33,4 +33,28 @@ class GenerateFollowupResponse(BaseModel):
     Args:
         followups (List[FollowupQuestion]): List of generated follow-up questions.
     """
-    followups: List[FollowupQuestion] 
+    followups: List[FollowupQuestion]
+
+class SingleReasonRequest(BaseModel):
+    """
+    Request model for generating a single reason-based follow-up question.
+
+    Args:
+        question (str): The original survey question.
+        response (str): The user's answer to the survey question.
+    """
+    question: str = Field(..., description="The original survey question.")
+    response: str = Field(..., description="The user's answer to the survey question.")
+
+class SingleReasonResponse(BaseModel):
+    """
+    Response model for a single reason-based follow-up question.
+
+    Args:
+        question (str): The generated reason-based follow-up question.
+        original_question (str): The original survey question.
+        original_response (str): The original user response.
+    """
+    question: str = Field(..., description="The generated reason-based follow-up question.")
+    original_question: str = Field(..., description="The original survey question.")
+    original_response: str = Field(..., description="The original user response.") 

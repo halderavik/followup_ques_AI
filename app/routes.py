@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app
 from pydantic import ValidationError
-from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion
+from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse
 from .question_types import QuestionType
 from .error_models import ErrorResponse, ValidationErrorResponse
 from .deepseek_service import DeepSeekService, DeepSeekAPIError
@@ -23,12 +23,14 @@ def root():
         "endpoints": {
             "health": "/health",
             "question_types": "/question-types",
-            "generate_followup": "/generate-followup"
+            "generate_followup": "/generate-followup",
+            "generate_reason": "/generate-reason"
         },
         "usage": {
             "health": "GET /health - Check API status",
             "question_types": "GET /question-types - Get available question types",
-            "generate_followup": "POST /generate-followup - Generate follow-up questions"
+            "generate_followup": "POST /generate-followup - Generate follow-up questions",
+            "generate_reason": "POST /generate-reason - Generate single reason-based question"
         }
     }), 200
 
@@ -84,6 +86,61 @@ def generate_followup():
             followups=[FollowupQuestion(type=QuestionType(f["type"]), text=f["text"]) for f in followups]
         )
         return jsonify(response.dict()), 200
+    except DeepSeekAPIError as dse:
+        return jsonify(ErrorResponse(
+            detail=str(dse),
+            code="deepseek_error"
+        ).dict()), 502
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Internal server error: {exc}",
+            code="internal_error"
+        ).dict()), 500
+
+@bp.route('/generate-reason', methods=['POST'])
+def generate_reason():
+    """
+    Generate a single reason-based follow-up question for a survey response.
+
+    Returns:
+        JSON: Generated reason-based follow-up question or error.
+    """
+    try:
+        data = request.get_json()
+        req = SingleReasonRequest(**data)
+    except ValidationError as ve:
+        return jsonify(ValidationErrorResponse(
+            detail="Invalid request data.",
+            code="validation_error",
+            errors=ve.errors()
+        ).dict()), 422
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Malformed request: {exc}",
+            code="bad_request"
+        ).dict()), 400
+
+    service = DeepSeekService()
+    # Force question type to be REASON only
+    prompt = service.build_prompt(req.question, req.response, ["REASON"])
+    try:
+        api_response = service.generate_questions(prompt)
+        followups = service.parse_response(api_response)
+        
+        # Take only the first question (should be REASON type)
+        if followups and len(followups) > 0:
+            first_question = followups[0]["text"]
+            response = SingleReasonResponse(
+                question=first_question,
+                original_question=req.question,
+                original_response=req.response
+            )
+            return jsonify(response.dict()), 200
+        else:
+            return jsonify(ErrorResponse(
+                detail="No follow-up question generated",
+                code="no_question_generated"
+            ).dict()), 500
     except DeepSeekAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),

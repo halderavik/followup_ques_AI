@@ -58,4 +58,58 @@ def test_generate_followup_success(client, monkeypatch):
     assert resp.status_code == 200
     data = resp.get_json()
     assert 'followups' in data
-    assert data['followups'][0]['type'] == 'reason' 
+    assert data['followups'][0]['type'] == 'reason'
+
+def test_generate_reason_no_auth_required(client):
+    """Test /generate-reason works without API key (no auth required)."""
+    payload = {
+        "question": "What did you like?",
+        "response": "The service was fast."
+    }
+    resp = client.post('/generate-reason', json=payload)
+    # Should not return 401 - no auth required
+    assert resp.status_code != 401
+
+def test_generate_reason_validation_error(client):
+    """Test /generate-reason returns 422 for invalid input."""
+    resp = client.post('/generate-reason', json={})
+    assert resp.status_code == 422
+    data = resp.get_json()
+    assert data['code'] == 'validation_error'
+
+def test_generate_reason_success(client, monkeypatch):
+    """Test /generate-reason returns single reason question on valid input."""
+    # Patch DeepSeekService methods
+    from app.deepseek_service import DeepSeekService
+    monkeypatch.setattr(DeepSeekService, 'generate_questions', lambda self, prompt: {"followups": [{"type": "reason", "text": "Why did you find the service fast?"}]})
+    monkeypatch.setattr(DeepSeekService, 'parse_response', lambda self, resp: resp["followups"])
+    
+    payload = {
+        "question": "What did you like?",
+        "response": "The service was fast."
+    }
+    resp = client.post('/generate-reason', data=json.dumps(payload), content_type='application/json')
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert 'question' in data
+    assert 'original_question' in data
+    assert 'original_response' in data
+    assert data['question'] == "Why did you find the service fast?"
+    assert data['original_question'] == "What did you like?"
+    assert data['original_response'] == "The service was fast."
+
+def test_generate_reason_no_question_generated(client, monkeypatch):
+    """Test /generate-reason returns error when no question is generated."""
+    # Patch DeepSeekService methods to return empty response
+    from app.deepseek_service import DeepSeekService
+    monkeypatch.setattr(DeepSeekService, 'generate_questions', lambda self, prompt: {"followups": []})
+    monkeypatch.setattr(DeepSeekService, 'parse_response', lambda self, resp: resp["followups"])
+    
+    payload = {
+        "question": "What did you like?",
+        "response": "The service was fast."
+    }
+    resp = client.post('/generate-reason', data=json.dumps(payload), content_type='application/json')
+    assert resp.status_code == 500
+    data = resp.get_json()
+    assert data['code'] == 'no_question_generated' 
