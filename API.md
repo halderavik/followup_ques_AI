@@ -84,6 +84,11 @@ Returns all supported question types for follow-up generation.
 
 Generates 2-3 intelligent follow-up questions based on the original question and response.
 
+### 5. Generate Single Reason Question
+**POST** `/generate-reason`
+
+Generates a single reason-based follow-up question for deeper understanding.
+
 **Request Body:**
 ```json
 {
@@ -112,6 +117,23 @@ Generates 2-3 intelligent follow-up questions based on the original question and
   ],
   "original_question": "What challenges do you face at work?",
   "original_answer": "I struggle with time management and communication with my team."
+}
+```
+
+**Request Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication with my team."
+}
+```
+
+**Response:**
+```json
+{
+  "question": "What specific factors contribute to your time management challenges?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management and communication with my team."
 }
 ```
 
@@ -221,6 +243,16 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-foll
   }'
 ```
 
+#### cURL Example for Single Reason Question
+```bash
+curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What challenges do you face at work?",
+    "response": "I struggle with time management and communication."
+  }'
+```
+
 #### Python Example
 ```python
 import requests
@@ -259,7 +291,38 @@ try:
         
 except Exception as e:
     print(f"Error: {e}")
-```
+
+# Single reason question example
+def generate_single_reason_question(question, response):
+    url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason"
+    
+    payload = {
+        "question": question,
+        "response": response
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"API Error: {response.status_code}")
+
+# Usage example for single reason question
+try:
+    result = generate_single_reason_question(
+        question="What challenges do you face at work?",
+        response="I struggle with time management and communication."
+    )
+    
+    print(f"Generated question: {result['question']}")
+        
+except Exception as e:
+    print(f"Error: {e}")
 
 #### JavaScript/Node.js Example
 ```javascript
@@ -302,7 +365,41 @@ generateFollowupQuestions(
 .catch(error => {
     console.error('Error:', error);
 });
-```
+
+// Single reason question example
+async function generateSingleReasonQuestion(question, response) {
+    try {
+        const result = await axios.post(
+            'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason',
+            {
+                question: question,
+                response: response
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        return result.data;
+    } catch (error) {
+        console.error('API Error:', error.response?.data || error.message);
+        throw error;
+    }
+}
+
+// Usage example for single reason question
+generateSingleReasonQuestion(
+    "What challenges do you face at work?",
+    "I struggle with time management and communication."
+)
+.then(result => {
+    console.log(`Generated question: ${result.question}`);
+})
+.catch(error => {
+    console.error('Error:', error);
+});
 
 ## 📋 Question Types Reference
 
@@ -344,6 +441,17 @@ generateFollowupQuestions(
 1. "What makes you enjoy working with your colleagues?"
 2. "Can you describe a specific situation where the crowded office space was problematic?"
 3. "How does this work environment compare to your previous workplaces?"
+
+### Single Reason Question Example
+```json
+{
+  "question": "What do you think about our product?",
+  "response": "The interface is confusing and it's too slow."
+}
+```
+
+**Generated Reason Question:**
+"Why do you find the interface confusing and slow?"
 
 ## ⚠️ Error Handling
 
@@ -406,6 +514,7 @@ For technical support or questions about integration:
 - [ ] Test the health endpoint: `GET /health`
 - [ ] Review available question types: `GET /question-types`
 - [ ] Test with a sample request: `POST /generate-followup`
+- [ ] Test single reason question: `POST /generate-reason`
 - [ ] Choose your integration method (JavaScript, webhooks, etc.)
 - [ ] Implement error handling
 - [ ] Test with real survey data
