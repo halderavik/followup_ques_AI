@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from pydantic import ValidationError
 from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse
 from .question_types import QuestionType
@@ -8,7 +8,15 @@ from .deepseek_service import DeepSeekService, DeepSeekAPIError
 
 bp = Blueprint('api', __name__)
 
+# Root route to serve the frontend
 @bp.route('/', methods=['GET'])
+def serve_frontend():
+    """
+    Serve the performance monitoring frontend.
+    """
+    return send_from_directory('../static', 'index.html')
+
+@bp.route('/api-info', methods=['GET'])
 def root():
     """
     Root endpoint with API information.

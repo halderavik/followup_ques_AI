@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Survey Intelligence API - Performance Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border-left: 4px solid #4facfe;
+        }
+
+        .section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            border-color: #4facfe;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .test-section {
+            background: white;
+            border: 2px solid #e9ecef;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .response-area {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 100px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-online {
+            background: #28a745;
+        }
+
+        .status-offline {
+            background: #dc3545;
+        }
+
+        .status-loading {
+            background: #ffc107;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .log-section {
+            background: #2d3748;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .log-info { background: rgba(59, 130, 246, 0.2); }
+        .log-success { background: rgba(34, 197, 94, 0.2); }
+        .log-error { background: rgba(239, 68, 68, 0.2); }
+        .log-warning { background: rgba(245, 158, 11, 0.2); }
+
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #4facfe;
+            color: white;
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            transform: rotate(180deg);
+            background: #00f2fe;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .auto-refresh input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Survey Intelligence API</h1>
+            <p>Performance Monitor & Testing Dashboard</p>
+        </div>
+
+        <div class="content">
+            <!-- Performance Metrics Section -->
+            <div class="section">
+                <h2>📊 Performance Metrics</h2>
+                <div class="auto-refresh">
+                    <input type="checkbox" id="autoRefresh" checked>
+                    <label for="autoRefresh">Auto-refresh every 5 seconds</label>
+                    <span id="lastUpdate"></span>
+                </div>
+                <div class="metrics-grid" id="metricsGrid">
+                    <div class="metric-card">
+                        <div class="metric-value" id="cacheSize">-</div>
+                        <div class="metric-label">Cache Size</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="cacheTtl">-</div>
+                        <div class="metric-label">Cache TTL (hours)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="timeout">-</div>
+                        <div class="metric-label">Timeout (seconds)</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="maxTokens">-</div>
+                        <div class="metric-label">Max Tokens</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="retries">-</div>
+                        <div class="metric-label">Retries</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="apiStatus">
+                            <span class="status-indicator status-offline"></span>Offline
+                        </div>
+                        <div class="metric-label">API Status</div>
+                    </div>
+                </div>
+                <button class="btn" onclick="loadPerformanceMetrics()">🔄 Refresh Metrics</button>
+            </div>
+
+            <!-- API Testing Section -->
+            <div class="section test-section">
+                <h2>🧪 API Testing</h2>
+                
+                <!-- Health Check -->
+                <div class="form-group">
+                    <h3>Health Check</h3>
+                    <button class="btn btn-success" onclick="testHealth()">🏥 Test Health</button>
+                    <div class="response-area" id="healthResponse"></div>
+                </div>
+
+                <!-- Generate Reason Test -->
+                <div class="form-group">
+                    <h3>Generate Reason Question</h3>
+                    <label for="testQuestion">Question:</label>
+                    <input type="text" id="testQuestion" value="What challenges do you face at work?" placeholder="Enter survey question">
+                    
+                    <label for="testResponse">Response:</label>
+                    <textarea id="testResponse" rows="3" placeholder="Enter user response">I struggle with time management and communication.</textarea>
+                    
+                    <button class="btn btn-secondary" onclick="testGenerateReason()">🎯 Generate Reason Question</button>
+                    <button class="btn btn-warning" onclick="testGenerateReasonCached()">⚡ Test Cached Response</button>
+                    <div class="response-area" id="reasonResponse"></div>
+                </div>
+
+                <!-- Generate Followup Test -->
+                <div class="form-group">
+                    <h3>Generate Multiple Followup Questions</h3>
+                    <label for="followupQuestion">Question:</label>
+                    <input type="text" id="followupQuestion" value="How satisfied are you with our product?" placeholder="Enter survey question">
+                    
+                    <label for="followupResponse">Response:</label>
+                    <textarea id="followupResponse" rows="3" placeholder="Enter user response">It's okay, but could be better. The interface is confusing sometimes.</textarea>
+                    
+                    <button class="btn btn-secondary" onclick="testGenerateFollowup()">🔄 Generate Followup Questions</button>
+                    <div class="response-area" id="followupResponse"></div>
+                </div>
+            </div>
+
+            <!-- Activity Log -->
+            <div class="section">
+                <h2>📝 Activity Log</h2>
+                <button class="btn btn-warning" onclick="clearLog()">🗑️ Clear Log</button>
+                <div class="log-section" id="activityLog"></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="refresh-btn" onclick="loadPerformanceMetrics()" title="Refresh Metrics">🔄</button>
+
+    <script>
+        const API_BASE_URL = 'https://follow-up-question-f00b29aae45c.herokuapp.com';
+        let autoRefreshInterval;
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPerformanceMetrics();
+            startAutoRefresh();
+            
+            // Auto-refresh toggle
+            document.getElementById('autoRefresh').addEventListener('change', function() {
+                if (this.checked) {
+                    startAutoRefresh();
+                } else {
+                    stopAutoRefresh();
+                }
+            });
+        });
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(loadPerformanceMetrics, 5000);
+            log('Auto-refresh started', 'info');
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            log('Auto-refresh stopped', 'warning');
+        }
+
+        async function loadPerformanceMetrics() {
+            try {
+                log('Loading performance metrics...', 'info');
+                const response = await fetch(`${API_BASE_URL}/api/performance`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateMetrics(data);
+                    updateApiStatus(true);
+                    log('Performance metrics loaded successfully', 'success');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateApiStatus(false);
+                log(`Failed to load performance metrics: ${error.message}`, 'error');
+            }
+            
+            updateLastUpdate();
+        }
+
+        function updateMetrics(data) {
+            document.getElementById('cacheSize').textContent = data.cache_size || 0;
+            document.getElementById('cacheTtl').textContent = Math.round((data.cache_ttl || 3600) / 3600);
+            document.getElementById('timeout').textContent = data.timeout || 15;
+            document.getElementById('maxTokens').textContent = data.max_tokens || 300;
+            document.getElementById('retries').textContent = data.retries || 1;
+        }
+
+        function updateApiStatus(isOnline) {
+            const statusElement = document.getElementById('apiStatus');
+            const indicator = statusElement.querySelector('.status-indicator');
+            
+            if (isOnline) {
+                indicator.className = 'status-indicator status-online';
+                statusElement.innerHTML = '<span class="status-indicator status-online"></span>Online';
+            } else {
+                indicator.className = 'status-indicator status-offline';
+                statusElement.innerHTML = '<span class="status-indicator status-offline"></span>Offline';
+            }
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = `Last updated: ${now.toLocaleTimeString()}`;
+        }
+
+        async function testHealth() {
+            try {
+                log('Testing health endpoint...', 'info');
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const data = await response.json();
+                
+                document.getElementById('healthResponse').textContent = JSON.stringify(data, null, 2);
+                log('Health check completed', 'success');
+            } catch (error) {
+                document.getElementById('healthResponse').textContent = `Error: ${error.message}`;
+                log(`Health check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGenerateReason() {
+            const question = document.getElementById('testQuestion').value;
+            const response = document.getElementById('testResponse').value;
+            
+            if (!question || !response) {
+                log('Please fill in both question and response fields', 'warning');
+                return;
+            }
+
+            try {
+                log('Generating reason question...', 'info');
+                const apiResponse = await fetch(`${API_BASE_URL}/api/generate-reason`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        response: response
+                    })
+                });
+
+                const data = await apiResponse.json();
+                document.getElementById('reasonResponse').textContent = JSON.stringify(data, null, 2);
+                
+                if (apiResponse.ok) {
+                    log('Reason question generated successfully', 'success');
+                } else {
+                    log(`API error: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('reasonResponse').textContent = `Error: ${error.message}`;
+                log(`Failed to generate reason question: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGenerateReasonCached() {
+            // This will test the same request again to see if it's cached
+            log('Testing cached response (same request)...', 'info');
+            await testGenerateReason();
+        }
+
+        async function testGenerateFollowup() {
+            const question = document.getElementById('followupQuestion').value;
+            const response = document.getElementById('followupResponse').value;
+            
+            if (!question || !response) {
+                log('Please fill in both question and response fields', 'warning');
+                return;
+            }
+
+            try {
+                log('Generating followup questions...', 'info');
+                const apiResponse = await fetch(`${API_BASE_URL}/api/generate-followup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: question,
+                        response: response,
+                        allowed_types: ['reason', 'clarification', 'elaboration']
+                    })
+                });
+
+                const data = await apiResponse.json();
+                document.getElementById('followupResponse').textContent = JSON.stringify(data, null, 2);
+                
+                if (apiResponse.ok) {
+                    log('Followup questions generated successfully', 'success');
+                } else {
+                    log(`API error: ${data.detail || 'Unknown error'}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('followupResponse').textContent = `Error: ${error.message}`;
+                log(`Failed to generate followup questions: ${error.message}`, 'error');
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logSection = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logSection.appendChild(logEntry);
+            logSection.scrollTop = logSection.scrollHeight;
+            
+            // Keep only last 50 log entries
+            while (logSection.children.length > 50) {
+                logSection.removeChild(logSection.firstChild);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('activityLog').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+    </script>
+</body>
+</html> 

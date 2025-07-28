@@ -12,7 +12,7 @@ def create_app() -> Flask:
     Returns:
         Flask: Configured Flask application instance.
     """
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='../static', static_url_path='')
 
     # Configure logging
     setup_logging()
