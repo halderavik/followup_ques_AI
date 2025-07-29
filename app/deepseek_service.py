@@ -167,6 +167,34 @@ class DeepSeekService:
         if expired_keys:
             self.logger.info(f"Cleaned up {len(expired_keys)} expired cache entries")
 
+    def _clean_question_text(self, text: str) -> str:
+        """
+        Clean up question text by removing JSON artifacts and formatting.
+        
+        Args:
+            text (str): Raw question text that may contain JSON artifacts.
+            
+        Returns:
+            str: Clean question text.
+        """
+        if not text:
+            return text
+            
+        # Remove "text": " prefix and trailing quotes
+        if text.startswith('"text": "') and text.endswith('"'):
+            text = text[8:-1]  # Remove "text": " and trailing "
+        elif text.startswith('"text":'):
+            text = text[7:].strip().strip('"')
+        
+        # Remove any remaining JSON artifacts
+        text = text.replace('\\"', '"')  # Unescape quotes
+        text = text.replace('\\n', ' ')  # Replace newlines with spaces
+        
+        # Remove any remaining quotes at the beginning or end
+        text = text.strip().strip('"').strip("'")
+        
+        return text
+
     def parse_response(self, api_response: dict) -> list:
         """
         Parse the DeepSeek API response to extract follow-up questions.
@@ -198,10 +226,12 @@ class DeepSeekService:
                     parsed = json.loads(content.strip())
                     questions = parsed.get("followups", [])
                     if isinstance(questions, list) and questions:
-                        # Convert question types to lowercase to match enum
+                        # Convert question types to lowercase to match enum and clean text
                         for question in questions:
                             if isinstance(question, dict) and "type" in question:
                                 question["type"] = question["type"].lower()
+                            if isinstance(question, dict) and "text" in question:
+                                question["text"] = self._clean_question_text(question["text"])
                         return questions
                 except json.JSONDecodeError:
                     pass
@@ -215,10 +245,12 @@ class DeepSeekService:
                         parsed = json.loads(json_str)
                         questions = parsed.get("followups", [])
                         if isinstance(questions, list) and questions:
-                            # Convert question types to lowercase to match enum
+                            # Convert question types to lowercase to match enum and clean text
                             for question in questions:
                                 if isinstance(question, dict) and "type" in question:
                                     question["type"] = question["type"].lower()
+                                if isinstance(question, dict) and "text" in question:
+                                    question["text"] = self._clean_question_text(question["text"])
                             return questions
                     except json.JSONDecodeError:
                         pass
@@ -264,6 +296,18 @@ class DeepSeekService:
                     
                 # Remove numbering and common prefixes
                 line = line.lstrip('0123456789.-* ')
+                
+                # Clean up malformed JSON responses
+                # Remove "text": " prefix and trailing quotes
+                if line.startswith('"text": "') and line.endswith('"'):
+                    line = line[8:-1]  # Remove "text": " and trailing "
+                elif line.startswith('"text":'):
+                    # Handle cases where text might be on multiple lines
+                    line = line[7:].strip().strip('"')
+                
+                # Remove any remaining JSON artifacts
+                line = line.replace('\\"', '"')  # Unescape quotes
+                line = line.replace('\\n', ' ')  # Replace newlines with spaces
                 
                 # Determine question type based on content
                 question_type = 'reason'  # default
