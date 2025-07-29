@@ -193,7 +193,15 @@ class DeepSeekService:
         # Remove any remaining quotes at the beginning or end
         text = text.strip().strip('"').strip("'")
         
-        return text
+        # Remove any leading quotes that might still be there
+        while text.startswith('"') or text.startswith("'"):
+            text = text[1:]
+        
+        # Remove any trailing quotes
+        while text.endswith('"') or text.endswith("'"):
+            text = text[:-1]
+        
+        return text.strip()
 
     def parse_response(self, api_response: dict) -> list:
         """
