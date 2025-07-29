@@ -305,17 +305,8 @@ class DeepSeekService:
                 # Remove numbering and common prefixes
                 line = line.lstrip('0123456789.-* ')
                 
-                # Clean up malformed JSON responses
-                # Remove "text": " prefix and trailing quotes
-                if line.startswith('"text": "') and line.endswith('"'):
-                    line = line[8:-1]  # Remove "text": " and trailing "
-                elif line.startswith('"text":'):
-                    # Handle cases where text might be on multiple lines
-                    line = line[7:].strip().strip('"')
-                
-                # Remove any remaining JSON artifacts
-                line = line.replace('\\"', '"')  # Unescape quotes
-                line = line.replace('\\n', ' ')  # Replace newlines with spaces
+                # Clean up the line using the cleaning function
+                line = self._clean_question_text(line)
                 
                 # Determine question type based on content
                 question_type = 'reason'  # default
