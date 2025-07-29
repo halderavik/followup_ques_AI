@@ -20,9 +20,9 @@ class DeepSeekService:
     Service class for interacting with the DeepSeek LLM API.
     """
     API_URL = "https://api.deepseek.com/v1/chat/completions"
-    TIMEOUT = 15  # Increased timeout for better reliability
-    RETRIES = 1   # Reduced retries to improve response time
-    MAX_TOKENS = 300  # Reduced from 500 for faster generation
+    TIMEOUT = 8  # Reduced from 15 to 8 seconds for faster failure detection
+    RETRIES = 0   # No retries for fastest response
+    MAX_TOKENS = 150  # Reduced from 300 for faster generation
 
     def __init__(self):
         """
@@ -42,22 +42,29 @@ class DeepSeekService:
             total=self.RETRIES,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["POST"],  # Updated from method_whitelist
-            backoff_factor=0.5
+            backoff_factor=0.1  # Reduced from 0.5 for faster retries
         )
         
-        # Configure adapter with connection pooling
+        # Configure adapter with optimized connection pooling
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
-            pool_connections=10,
-            pool_maxsize=20
+            pool_connections=20,  # Increased from 10
+            pool_maxsize=50,      # Increased from 20
+            pool_block=False      # Don't block on connection pool exhaustion
         )
         
         self.session.mount("https://", adapter)
         self.session.mount("http://", adapter)
         
+        # Pre-warm connection pool for faster initial requests
+        try:
+            self.session.get("https://api.deepseek.com", timeout=1)
+        except:
+            pass  # Ignore pre-warm failures
+        
         # Simple in-memory cache for performance
         self.cache = {}
-        self.cache_ttl = 3600  # 1 hour cache TTL
+        self.cache_ttl = 1800  # Reduced from 3600 to 30 minutes for faster cache invalidation
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -110,15 +117,18 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": "Generate 2-3 follow-up questions for survey responses. Return JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
+                    "content": "Generate 2-3 follow-up questions. Return JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.5,  # Reduced for more focused responses
-            "max_tokens": self.MAX_TOKENS
+            "temperature": 0.2,  # Reduced from 0.5 for faster, more consistent generation
+            "max_tokens": self.MAX_TOKENS,
+            "top_p": 0.9,        # Added for faster generation
+            "frequency_penalty": 0.0,  # Added to reduce repetition
+            "presence_penalty": 0.0    # Added to reduce repetition
         }
         try:
             response = self.session.post(
@@ -220,9 +230,9 @@ class DeepSeekService:
         Returns:
             str: The formatted prompt.
         """
-        # Optimized prompt for faster processing
+        # Ultra-optimized prompt for fastest processing
         types_str = f" Types: {','.join(allowed_types)}" if allowed_types else ""
-        return f"Q: {question} A: {response}{types_str}. Generate 2-3 follow-up questions."
+        return f"Q: {question} A: {response}{types_str}. Generate 2-3 questions."
 
     def generate_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> str:
         """
@@ -257,15 +267,18 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"The original question and response are in {language}. Generate 1 follow-up question in {language}. Return only the question text, no JSON."
+                    "content": f"Generate 1 follow-up question in {language}. Return only the question text."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.3,  # Lower temperature for more consistent multilingual output
-            "max_tokens": 150    # Reduced for faster single question generation
+            "temperature": 0.1,  # Reduced from 0.3 for faster, more consistent multilingual output
+            "max_tokens": 100,    # Reduced from 150 for faster single question generation
+            "top_p": 0.9,        # Added for faster generation
+            "frequency_penalty": 0.0,  # Added to reduce repetition
+            "presence_penalty": 0.0    # Added to reduce repetition
         }
 
         try:
@@ -315,7 +328,7 @@ class DeepSeekService:
         Returns:
             str: The formatted multilingual prompt.
         """
-        # Optimized prompt for fast multilingual generation
+        # Ultra-optimized prompt for fastest multilingual generation
         type_instructions = {
             "reason": "ask why",
             "impact": "ask about effects", 
@@ -329,4 +342,4 @@ class DeepSeekService:
         
         # Since question and response are already in the target language,
         # we just need to ask for a follow-up question in the same language
-        return f"Question: {question} Answer: {response}. Generate 1 {instruction} question in {language}." 
+        return f"Q: {question} A: {response}. Generate 1 {instruction} question in {language}." 
