@@ -57,4 +57,36 @@ class SingleReasonResponse(BaseModel):
     """
     question: str = Field(..., description="The generated reason-based follow-up question.")
     original_question: str = Field(..., description="The original survey question.")
-    original_response: str = Field(..., description="The original user response.") 
+    original_response: str = Field(..., description="The original user response.")
+
+class MultilingualQuestionRequest(BaseModel):
+    """
+    Request model for generating a single multilingual follow-up question.
+
+    Args:
+        question (str): The original survey question.
+        response (str): The user's answer to the survey question.
+        type (str): The type of follow-up question (reason, impact, elaboration, etc.).
+        language (str): The target language for the response (e.g., "Chinese", "Japanese", "Spanish").
+    """
+    question: str = Field(..., description="The original survey question.")
+    response: str = Field(..., description="The user's answer to the survey question.")
+    type: str = Field(..., description="The type of follow-up question.")
+    language: str = Field(..., description="The target language for the response.")
+
+class MultilingualQuestionResponse(BaseModel):
+    """
+    Response model for a single multilingual follow-up question.
+
+    Args:
+        question (str): The generated follow-up question in the target language.
+        original_question (str): The original survey question.
+        original_response (str): The original user response.
+        type (str): The type of follow-up question generated.
+        language (str): The language of the generated question.
+    """
+    question: str = Field(..., description="The generated follow-up question in the target language.")
+    original_question: str = Field(..., description="The original survey question.")
+    original_response: str = Field(..., description="The original user response.")
+    type: str = Field(..., description="The type of follow-up question generated.")
+    language: str = Field(..., description="The language of the generated question.") 

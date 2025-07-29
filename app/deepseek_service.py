@@ -222,4 +222,109 @@ class DeepSeekService:
         """
         # Optimized prompt for faster processing
         types_str = f" Types: {','.join(allowed_types)}" if allowed_types else ""
-        return f"Q: {question} A: {response}{types_str}. Generate 2-3 follow-up questions." 
+        return f"Q: {question} A: {response}{types_str}. Generate 2-3 follow-up questions."
+
+    def generate_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> str:
+        """
+        Generate a single multilingual follow-up question.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's answer.
+            question_type (str): The type of follow-up question.
+            language (str): The target language.
+
+        Returns:
+            str: The generated question in the target language.
+
+        Raises:
+            DeepSeekAPIError: If the API call fails.
+        """
+        # Create cache key including language and type for better caching
+        cache_key = self._get_cache_key(f"{question}:{response}:{question_type}:{language}")
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response
+
+        # Track performance
+        start_time = time.time()
+        
+        # Build optimized multilingual prompt
+        prompt = self._build_multilingual_prompt(question, response, question_type, language)
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"Generate 1 follow-up question in {language}. Return only the question text, no JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.3,  # Lower temperature for more consistent multilingual output
+            "max_tokens": 150    # Reduced for faster single question generation
+        }
+
+        try:
+            response = self.session.post(
+                self.API_URL,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=self.TIMEOUT
+            )
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Extract the question text directly
+                content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if not content:
+                    raise DeepSeekAPIError("No content in multilingual response.")
+                
+                # Clean up the response (remove quotes, extra whitespace)
+                question_text = content.strip().strip('"').strip("'")
+                
+                # Cache the response
+                self._cache_response(cache_key, question_text)
+                
+                # Log performance metrics
+                elapsed_time = time.time() - start_time
+                self.logger.info(f"Multilingual API call completed in {elapsed_time:.2f}s")
+                
+                return question_text
+            else:
+                self.logger.error(f"DeepSeek API error: {response.status_code} {response.text}")
+                raise DeepSeekAPIError(f"API error: {response.status_code} {response.text}")
+        except (RequestException, Timeout) as exc:
+            self.logger.error(f"Multilingual API request failed: {exc}")
+            raise DeepSeekAPIError(f"Request failed: {exc}")
+
+    @staticmethod
+    def _build_multilingual_prompt(question: str, response: str, question_type: str, language: str) -> str:
+        """
+        Build optimized prompt for multilingual question generation.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's answer.
+            question_type (str): The type of follow-up question.
+            language (str): The target language.
+
+        Returns:
+            str: The formatted multilingual prompt.
+        """
+        # Optimized prompt for fast multilingual generation
+        type_instructions = {
+            "reason": "ask why",
+            "impact": "ask about effects",
+            "elaboration": "ask for details",
+            "example": "ask for examples",
+            "clarification": "ask for clarification",
+            "comparison": "ask for comparison"
+        }
+        
+        instruction = type_instructions.get(question_type.lower(), "ask a follow-up")
+        
+        return f"Q: {question} A: {response}. {instruction} in {language}." 
