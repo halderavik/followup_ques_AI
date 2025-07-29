@@ -85,7 +85,7 @@ https://follow-up-question-f00b29aae45c.herokuapp.com/
   - `GET /api/health` - Health check
   - `GET /api/performance` - Performance metrics
   - `POST /api/generate-reason` - Single reason question
-  - `POST /api/generate-followup` - Multiple followup questions
+  - `POST /api/generate-followup` - Exactly 3 followup questions (Reason, Example, Impact)
 
 ### Performance Monitoring
 - **Auto-refresh**: 5-second intervals

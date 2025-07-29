@@ -2,7 +2,7 @@
 
 ## 🎯 Project Overview
 
-The Survey Intelligence API is a fully functional Flask-based REST API that generates intelligent follow-up questions for survey responses using DeepSeek LLM. The API is designed to help survey creators gather deeper insights by automatically suggesting relevant follow-up questions based on respondent answers.
+The Survey Intelligence API is a fully functional Flask-based REST API that generates intelligent follow-up questions for survey responses using DeepSeek LLM. The API is designed to help survey creators gather deeper insights by automatically suggesting exactly 3 relevant follow-up questions with specific types: Reason, Example, and Impact.
 
 ## ✅ Current Status: MVP Complete
 
@@ -11,13 +11,16 @@ The Survey Intelligence API is a fully functional Flask-based REST API that gene
 1. **AI-Powered Question Generation**
    - DeepSeek LLM integration with correct API endpoint
    - Intelligent prompt engineering for context-aware questions
-   - Support for 6 question types: reason, clarification, elaboration, example, impact, comparison
+   - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
+   - Type mapping and fallback mechanisms for reliable output
 
 2. **REST API Endpoints**
    - `GET /` - API information and endpoint overview
    - `GET /health` - Health check endpoint
    - `GET /question-types` - List all supported question types
-   - `POST /generate-followup` - Generate intelligent follow-up questions
+   - `POST /generate-followup` - Generate exactly 3 intelligent follow-up questions
+   - `POST /generate-reason` - Generate single reason-based question
+   - `POST /generate-multilingual` - Generate multilingual questions
 
 3. **User-Friendly Architecture**
    - No authentication required for users
@@ -49,29 +52,22 @@ curl -X POST http://localhost:5000/generate-followup \
 {
   "followups": [
     {
-      "text": "What specifically about the service made you feel it could be faster?",
+      "text": "Why do you think the service could be faster?",
       "type": "reason"
     },
     {
-      "text": "How did the speed of the service affect your overall experience?",
-      "type": "impact"
+      "text": "Can you give examples of when the service felt slow?",
+      "type": "example"
     },
     {
-      "text": "How does the speed of our service compare to similar services you've used?",
-      "type": "comparison"
+      "text": "How did the speed of the service impact your overall experience?",
+      "type": "impact"
     }
   ]
 }
 ```
 
-### With Specific Question Types
-```json
-{
-  "question": "How satisfied are you with our product?",
-  "response": "I am satisfied with the features but the price is too high.",
-  "allowed_types": ["reason", "example", "impact"]
-}
-```
+**Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact.
 
 ## 📁 Project Structure
 
@@ -212,12 +208,4 @@ AI_followup_ques/
 
 For questions or issues:
 1. Check the `POSTMAN_TESTING_GUIDE.md` for testing instructions
-2. Review the `README.md` for setup and usage
-3. Examine the `TASK.md` for development progress
-4. Use the provided Postman collection for API testing
-
----
-
-**Status**: ✅ MVP Complete - Ready for Production Deployment
-**Last Updated**: July 23, 2025
-**Version**: 1.0.0 
+2. Review the `README.md`

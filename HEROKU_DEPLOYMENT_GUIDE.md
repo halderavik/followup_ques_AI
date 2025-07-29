@@ -91,9 +91,28 @@ curl -X POST https://your-app-name.herokuapp.com/generate-followup \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What is your favorite programming language?",
-    "answer": "I love Python because it is easy to learn and has great libraries.",
-    "question_types": ["REASON", "EXAMPLE"]
+    "response": "I love Python because it is easy to learn and has great libraries."
   }'
+```
+
+**Expected Response:**
+```json
+{
+  "followups": [
+    {
+      "text": "Why do you love Python specifically?",
+      "type": "reason"
+    },
+    {
+      "text": "Can you give examples of Python libraries you find useful?",
+      "type": "example"
+    },
+    {
+      "text": "How has Python impacted your programming experience?",
+      "type": "impact"
+    }
+  ]
+}
 ```
 
 ## Cost Considerations

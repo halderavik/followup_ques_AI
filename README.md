@@ -1,15 +1,16 @@
 # Survey Intelligence API - MVP
 
 ## Overview
-This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides 2-3 contextually relevant follow-up questions per response.
+This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact.
 
 ## Features
 - AI-powered question generation (DeepSeek LLM)
-- 6 core follow-up question types (reason, clarification, elaboration, example, impact, comparison)
+- **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
 - Simple REST API (JSON)
 - No authentication required for users
 - Comprehensive error handling
 - Intelligent follow-up question generation
+- Type mapping and fallback mechanisms for reliable output
 
 ## Tech Stack
 - Python 3.9+
@@ -96,14 +97,13 @@ Health check endpoint. Returns `{"status": "ok"}`.
 Returns all supported follow-up question types.
 
 ### POST `/generate-followup`
-Generates intelligent follow-up questions based on survey responses.
+Generates exactly 3 intelligent follow-up questions based on survey responses with specific types: Reason, Example, and Impact.
 
 **Request Body:**
 ```json
 {
   "question": "What did you think of our service?",
-  "response": "The service was good but could be faster.",
-  "allowed_types": ["reason", "impact"]  // Optional
+  "response": "The service was good but could be faster."
 }
 ```
 
@@ -112,16 +112,22 @@ Generates intelligent follow-up questions based on survey responses.
 {
   "followups": [
     {
-      "text": "What specifically about the service made you feel it could be faster?",
+      "text": "Why do you think the service could be faster?",
       "type": "reason"
     },
     {
-      "text": "How did the speed of the service affect your overall experience?",
+      "text": "Can you give examples of when the service felt slow?",
+      "type": "example"
+    },
+    {
+      "text": "How did the speed of the service impact your overall experience?",
       "type": "impact"
     }
   ]
 }
 ```
+
+**Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact. The `allowed_types` parameter is no longer used as the types are fixed.
 
 ## License
 MIT (or specify as appropriate) 

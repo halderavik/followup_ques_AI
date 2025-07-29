@@ -98,7 +98,6 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **3.2.3** Create cURL examples
 - [x] **3.2.4** Create Postman collection
 - [x] **3.2.5** Add integration best practices guide
-- [x] **3.2.6** Add integration examples for `/generate-reason` endpoint
 
 ### 3.3 Deployment Preparation (Days 14-15)
 - [x] **3.3.1** Create Docker configuration
@@ -108,15 +107,17 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **3.3.5** Set up basic monitoring
 - [x] **3.3.6** Deploy to Heroku with new `/generate-reason` endpoint
 
-## Week 4: Testing & Launch
+## Week 4: Recent Updates & Fixes
 
-### 4.1 Beta Testing (Days 16-17)
-- [x] **4.1.1** Deploy to staging environment
-- [x] **4.1.2** Recruit 3-5 beta testers
-- [x] **4.1.3** Conduct user testing sessions
-- [x] **4.1.4** Collect feedback on question quality
-- [x] **4.1.5** Test with real survey scenarios
-- [x] **4.1.6** Test new `/generate-reason` endpoint with Postman
+### 4.1 Follow-up API Enhancement (Recent)
+- [x] **4.1.1** Fix follow-up API to return exactly 3 questions
+- [x] **4.1.2** Implement specific question types: Reason, Example, Impact
+- [x] **4.1.3** Add type mapping and fallback mechanisms
+- [x] **4.1.4** Update prompt engineering for consistent output
+- [x] **4.1.5** Add `_ensure_three_questions()` method for reliable output
+- [x] **4.1.6** Test and verify 3-question requirement
+- [x] **4.1.7** Deploy fix to Heroku
+- [x] **4.1.8** Update all documentation to reflect changes
 
 ### 4.2 Bug Fixes & Improvements (Days 18-19)
 - [x] **4.2.1** Fix issues identified in beta testing

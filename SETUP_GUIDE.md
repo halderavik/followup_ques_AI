@@ -52,9 +52,28 @@ curl -X POST http://localhost:5000/generate-followup \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What challenges do you face at work?",
-    "answer": "I struggle with time management and communication.",
-    "question_types": ["REASON", "EXAMPLE"]
+    "response": "I struggle with time management and communication."
   }'
+```
+
+**Expected Response:**
+```json
+{
+  "followups": [
+    {
+      "text": "Why do you think time management and communication are challenging?",
+      "type": "reason"
+    },
+    {
+      "text": "Can you give examples of when these challenges arise?",
+      "type": "example"
+    },
+    {
+      "text": "How do these challenges impact your work performance?",
+      "type": "impact"
+    }
+  ]
+}
 ```
 
 ## 🔐 Security Configuration

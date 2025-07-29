@@ -42,7 +42,9 @@ Returns basic API information and available endpoints.
   "endpoints": {
     "health": "/health",
     "question_types": "/question-types",
-    "generate_followup": "/generate-followup"
+    "generate_followup": "/generate-followup",
+    "generate_reason": "/generate-reason",
+    "generate_multilingual": "/generate-multilingual"
   }
 }
 ```
@@ -82,7 +84,37 @@ Returns all supported question types for follow-up generation.
 ### 4. Generate Follow-up Questions
 **POST** `/generate-followup`
 
-Generates 2-3 intelligent follow-up questions based on the original question and response.
+Generates exactly 3 intelligent follow-up questions with specific types: Reason, Example, and Impact.
+
+**Request Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication with my team."
+}
+```
+
+**Response:**
+```json
+{
+  "followups": [
+    {
+      "text": "Why do you think time management and communication are challenging for you?",
+      "type": "reason"
+    },
+    {
+      "text": "Can you give examples of when time management and communication issues arise?",
+      "type": "example"
+    },
+    {
+      "text": "How do these challenges impact your work performance and team dynamics?",
+      "type": "impact"
+    }
+  ]
+}
+```
+
+**Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact. The `allowed_types` parameter is no longer used as the types are fixed.
 
 ### 5. Generate Single Reason Question
 **POST** `/generate-reason`
@@ -93,7 +125,7 @@ Generates a single reason-based follow-up question for deeper understanding.
 ```json
 {
   "question": "What challenges do you face at work?",
-  "response": "I struggle with time management and communication with my team."
+  "response": "I struggle with time management and communication."
 }
 ```
 
@@ -171,16 +203,15 @@ Qualtrics.SurveyEngine.addOnload(function() {
         },
         body: JSON.stringify({
             question: "What challenges do you face at work?",
-            answer: response,
-            question_types: ["REASON", "EXAMPLE"]
+            response: response
         })
     })
     .then(response => response.json())
     .then(data => {
         // Display follow-up questions
-        data.followup_questions.forEach(q => {
+        data.followups.forEach(q => {
             // Create new question elements
-            console.log(q.question);
+            console.log(`${q.type}: ${q.text}`);
         });
     });
 });
@@ -197,14 +228,14 @@ Qualtrics.SurveyEngine.addOnload(function() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             question: "${e://Field/original_question}",
-            answer: response,
-            question_types: ["REASON", "EXAMPLE"]
+            response: response
         })
     })
     .then(r => r.json())
     .then(data => {
-        Qualtrics.SurveyEngine.setEmbeddedData('followup_1', data.followup_questions[0].question);
-        Qualtrics.SurveyEngine.setEmbeddedData('followup_2', data.followup_questions[1].question);
+        Qualtrics.SurveyEngine.setEmbeddedData('followup_1', data.followups[0].text);
+        Qualtrics.SurveyEngine.setEmbeddedData('followup_2', data.followups[1].text);
+        Qualtrics.SurveyEngine.setEmbeddedData('followup_3', data.followups[2].text);
     });
 });
 ```
@@ -227,14 +258,13 @@ app.post('/webhook/surveymonkey', (req, res) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 question: answer.question_text,
-                answer: answer.text,
-                question_types: ["REASON", "EXAMPLE"]
+                response: answer.text
             })
         })
         .then(r => r.json())
         .then(data => {
             // Send follow-up questions via email or SMS
-            sendFollowupQuestions(response.respondent_id, data.followup_questions);
+            sendFollowupQuestions(response.respondent_id, data.followups);
         });
     }
     
@@ -250,8 +280,7 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-foll
   -H "Content-Type: application/json" \
   -d '{
     "question": "What is your favorite programming language?",
-    "answer": "I love Python because it is easy to learn and has great libraries.",
-    "question_types": ["REASON", "EXAMPLE"]
+    "response": "I love Python because it is easy to learn and has great libraries."
   }'
 ```
 
@@ -270,13 +299,12 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reas
 import requests
 import json
 
-def generate_followup_questions(question, answer, question_types=None):
+def generate_followup_questions(question, response):
     url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup"
     
     payload = {
         "question": question,
-        "answer": answer,
-        "question_types": question_types or ["REASON", "EXAMPLE"]
+        "response": response
     }
     
     headers = {
@@ -294,12 +322,11 @@ def generate_followup_questions(question, answer, question_types=None):
 try:
     result = generate_followup_questions(
         question="What challenges do you face at work?",
-        answer="I struggle with time management and communication.",
-        question_types=["REASON", "EXAMPLE", "IMPACT"]
+        response="I struggle with time management and communication."
     )
     
-    for q in result['followup_questions']:
-        print(f"{q['type']}: {q['question']}")
+    for q in result['followups']:
+        print(f"{q['type']}: {q['text']}")
         
 except Exception as e:
     print(f"Error: {e}")
@@ -340,14 +367,13 @@ except Exception as e:
 ```javascript
 const axios = require('axios');
 
-async function generateFollowupQuestions(question, answer, questionTypes = ['REASON', 'EXAMPLE']) {
+async function generateFollowupQuestions(question, response) {
     try {
-        const response = await axios.post(
+        const apiResponse = await axios.post(
             'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup',
             {
                 question: question,
-                answer: answer,
-                question_types: questionTypes
+                response: response
             },
             {
                 headers: {
@@ -356,27 +382,31 @@ async function generateFollowupQuestions(question, answer, questionTypes = ['REA
             }
         );
         
-        return response.data;
+        return apiResponse.data;
     } catch (error) {
-        console.error('API Error:', error.response?.data || error.message);
-        throw error;
+        throw new Error(`API Error: ${error.response?.status || error.message}`);
     }
 }
 
 // Usage example
-generateFollowupQuestions(
-    "What challenges do you face at work?",
-    "I struggle with time management and communication.",
-    ["REASON", "EXAMPLE", "IMPACT"]
-)
-.then(result => {
-    result.followup_questions.forEach(q => {
-        console.log(`${q.type}: ${q.question}`);
-    });
-})
-.catch(error => {
-    console.error('Error:', error);
-});
+async function main() {
+    try {
+        const result = await generateFollowupQuestions(
+            "What challenges do you face at work?",
+            "I struggle with time management and communication."
+        );
+        
+        result.followups.forEach(q => {
+            console.log(`${q.type}: ${q.text}`);
+        });
+        
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+    }
+}
+
+main();
+```
 
 // Single reason question example
 async function generateSingleReasonQuestion(question, response) {
