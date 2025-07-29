@@ -117,7 +117,7 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": "Generate 2-3 follow-up questions. Return JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
+                    "content": "Generate 2-3 follow-up questions. Return ONLY valid JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
                 },
                 {
                     "role": "user",
@@ -193,30 +193,89 @@ class DeepSeekService:
             # Try to parse JSON from the content
             import json
             try:
-                # Look for JSON in the response content
+                # First, try to parse the entire content as JSON
+                try:
+                    parsed = json.loads(content.strip())
+                    questions = parsed.get("followups", [])
+                    if isinstance(questions, list) and questions:
+                        return questions
+                except json.JSONDecodeError:
+                    pass
+                
+                # If that fails, look for JSON within the content
                 start_idx = content.find('{')
                 end_idx = content.rfind('}') + 1
-                if start_idx == -1 or end_idx == 0:
-                    raise DeepSeekAPIError("No JSON found in response content.")
+                if start_idx != -1 and end_idx > start_idx:
+                    json_str = content[start_idx:end_idx]
+                    try:
+                        parsed = json.loads(json_str)
+                        questions = parsed.get("followups", [])
+                        if isinstance(questions, list) and questions:
+                            return questions
+                    except json.JSONDecodeError:
+                        pass
                 
-                json_str = content[start_idx:end_idx]
-                parsed = json.loads(json_str)
+                # If JSON parsing fails, try to extract questions from plain text
+                self.logger.warning("JSON parsing failed, attempting to extract questions from plain text")
+                questions = self._extract_questions_from_text(content)
+                if questions:
+                    return questions
                 
-                questions = parsed.get("followups", [])
-                if not isinstance(questions, list):
-                    raise DeepSeekAPIError("Invalid response: 'followups' field missing or not a list.")
+                raise DeepSeekAPIError("Could not extract questions from response content.")
                 
-                for q in questions:
-                    if not (isinstance(q, dict) and "type" in q and "text" in q):
-                        raise DeepSeekAPIError("Invalid followup question format in response.")
-                
-                return questions
-            except json.JSONDecodeError:
-                raise DeepSeekAPIError("Failed to parse JSON from DeepSeek response content.")
+            except Exception as exc:
+                self.logger.error(f"Failed to parse DeepSeek response: {exc}")
+                raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
                 
         except Exception as exc:
             self.logger.error(f"Failed to parse DeepSeek response: {exc}")
             raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
+
+    def _extract_questions_from_text(self, content: str) -> list:
+        """
+        Extract questions from plain text when JSON parsing fails.
+        
+        Args:
+            content (str): The response content as plain text.
+            
+        Returns:
+            list: List of question dicts with 'type' and 'text'.
+        """
+        try:
+            # Split content into lines and look for questions
+            lines = content.strip().split('\n')
+            questions = []
+            
+            # Common question patterns
+            question_types = ['reason', 'clarification', 'elaboration', 'example', 'impact', 'comparison']
+            
+            for line in lines:
+                line = line.strip()
+                if not line or len(line) < 10:
+                    continue
+                    
+                # Remove numbering and common prefixes
+                line = line.lstrip('0123456789.-* ')
+                
+                # Determine question type based on content
+                question_type = 'reason'  # default
+                for qtype in question_types:
+                    if qtype in line.lower():
+                        question_type = qtype
+                        break
+                
+                # Check if it looks like a question
+                if any(word in line.lower() for word in ['what', 'how', 'why', 'when', 'where', 'which', 'who', '?']):
+                    questions.append({
+                        'type': question_type.upper(),
+                        'text': line
+                    })
+            
+            return questions[:3]  # Return max 3 questions
+            
+        except Exception as e:
+            self.logger.error(f"Failed to extract questions from text: {e}")
+            return []
 
     @staticmethod
     def build_prompt(question: str, response: str, allowed_types: Optional[list] = None) -> str:
