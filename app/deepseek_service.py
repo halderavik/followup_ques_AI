@@ -208,10 +208,10 @@ class DeepSeekService:
         Parse the DeepSeek API response to extract follow-up questions.
 
         Args:
-            api_response (dict): The JSON response from DeepSeek API.
+            api_response (dict): The raw API response from DeepSeek.
 
         Returns:
-            list: List of follow-up question dicts with 'type' and 'text'.
+            list: List of question dictionaries with 'type' and 'text' fields.
 
         Raises:
             DeepSeekAPIError: If the response format is invalid or missing data.
@@ -240,7 +240,9 @@ class DeepSeekService:
                                 question["type"] = question["type"].lower()
                             if isinstance(question, dict) and "text" in question:
                                 question["text"] = self._clean_question_text(question["text"])
-                        return questions
+                        
+                        # Ensure we have exactly 3 questions with the required types
+                        return self._ensure_three_questions(questions)
                 except json.JSONDecodeError:
                     pass
                 
@@ -259,7 +261,9 @@ class DeepSeekService:
                                     question["type"] = question["type"].lower()
                                 if isinstance(question, dict) and "text" in question:
                                     question["text"] = self._clean_question_text(question["text"])
-                            return questions
+                            
+                            # Ensure we have exactly 3 questions with the required types
+                            return self._ensure_three_questions(questions)
                     except json.JSONDecodeError:
                         pass
                 
@@ -267,7 +271,7 @@ class DeepSeekService:
                 self.logger.warning("JSON parsing failed, attempting to extract questions from plain text")
                 questions = self._extract_questions_from_text(content)
                 if questions:
-                    return questions
+                    return self._ensure_three_questions(questions)
                 
                 raise DeepSeekAPIError("Could not extract questions from response content.")
                 
@@ -278,6 +282,70 @@ class DeepSeekService:
         except Exception as exc:
             self.logger.error(f"Failed to parse DeepSeek response: {exc}")
             raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
+
+    def _ensure_three_questions(self, questions: list) -> list:
+        """
+        Ensure exactly 3 questions with the required types: reason, example, impact.
+        
+        Args:
+            questions (list): List of question dictionaries.
+            
+        Returns:
+            list: Exactly 3 questions with the required types.
+        """
+        self.logger.info(f"Ensuring 3 questions from {len(questions)} input questions")
+        
+        required_types = ['reason', 'example', 'impact']
+        result = []
+        
+        # Type mapping for similar types
+        type_mapping = {
+            'elaboration': 'reason',
+            'clarification': 'reason',
+            'why': 'reason',
+            'examples': 'example',
+            'instance': 'example',
+            'case': 'example',
+            'effects': 'impact',
+            'consequences': 'impact',
+            'results': 'impact',
+            'outcomes': 'impact'
+        }
+        
+        # First, try to find questions with the exact required types
+        for req_type in required_types:
+            found = False
+            for question in questions:
+                if isinstance(question, dict) and question.get('type', '').lower() == req_type:
+                    result.append(question)
+                    found = True
+                    self.logger.info(f"Found exact match for {req_type}")
+                    break
+            
+            # If not found, try to map similar types
+            if not found:
+                for question in questions:
+                    question_type = question.get('type', '').lower()
+                    if question_type in type_mapping and type_mapping[question_type] == req_type:
+                        # Update the type to the required type
+                        question['type'] = req_type
+                        result.append(question)
+                        found = True
+                        self.logger.info(f"Mapped {question_type} to {req_type}")
+                        break
+            
+            # If we still didn't find a question with this type, create a default one
+            if not found:
+                result.append({
+                    'type': req_type,
+                    'text': f"Please provide more details about {req_type}."
+                })
+                self.logger.info(f"Created default question for {req_type}")
+        
+        # Ensure we have exactly 3 questions
+        final_result = result[:3]
+        self.logger.info(f"Final result: {[q.get('type', 'unknown') for q in final_result]}")
+        return final_result
 
     def _extract_questions_from_text(self, content: str) -> list:
         """
@@ -341,9 +409,8 @@ class DeepSeekService:
         Returns:
             str: The formatted prompt.
         """
-        # Ultra-minimal prompt for fastest processing
-        types_str = f" Types: {','.join(allowed_types)}" if allowed_types else ""
-        return f"Q: {question} A: {response}{types_str}. Generate 2-3 questions."
+        # For the main follow-up API, always generate exactly 3 questions with specific types
+        return f"Q: {question} A: {response}. Generate exactly 3 follow-up questions with these EXACT types: 1) type: 'reason' - ask why, 2) type: 'example' - ask for examples, 3) type: 'impact' - ask about effects. Return ONLY valid JSON with 'followups' array containing 3 objects with 'type' and 'text' fields."
 
     def generate_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> str:
         """
