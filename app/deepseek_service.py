@@ -198,6 +198,10 @@ class DeepSeekService:
                     parsed = json.loads(content.strip())
                     questions = parsed.get("followups", [])
                     if isinstance(questions, list) and questions:
+                        # Convert question types to lowercase to match enum
+                        for question in questions:
+                            if isinstance(question, dict) and "type" in question:
+                                question["type"] = question["type"].lower()
                         return questions
                 except json.JSONDecodeError:
                     pass
@@ -211,6 +215,10 @@ class DeepSeekService:
                         parsed = json.loads(json_str)
                         questions = parsed.get("followups", [])
                         if isinstance(questions, list) and questions:
+                            # Convert question types to lowercase to match enum
+                            for question in questions:
+                                if isinstance(question, dict) and "type" in question:
+                                    question["type"] = question["type"].lower()
                             return questions
                     except json.JSONDecodeError:
                         pass
@@ -267,7 +275,7 @@ class DeepSeekService:
                 # Check if it looks like a question
                 if any(word in line.lower() for word in ['what', 'how', 'why', 'when', 'where', 'which', 'who', '?']):
                     questions.append({
-                        'type': question_type.upper(),
+                        'type': question_type,  # Keep lowercase to match enum
                         'text': line
                     })
             
