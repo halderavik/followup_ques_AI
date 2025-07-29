@@ -93,37 +93,6 @@ Generates a single reason-based follow-up question for deeper understanding.
 ```json
 {
   "question": "What challenges do you face at work?",
-  "answer": "I struggle with time management and communication with my team.",
-  "question_types": ["REASON", "EXAMPLE", "IMPACT"]
-}
-```
-
-**Response:**
-```json
-{
-  "followup_questions": [
-    {
-      "question": "What specific aspects of time management do you find most challenging?",
-      "type": "CLARIFICATION"
-    },
-    {
-      "question": "Can you provide an example of a recent communication issue you encountered?",
-      "type": "EXAMPLE"
-    },
-    {
-      "question": "How do these challenges impact your overall work performance and team dynamics?",
-      "type": "IMPACT"
-    }
-  ],
-  "original_question": "What challenges do you face at work?",
-  "original_answer": "I struggle with time management and communication with my team."
-}
-```
-
-**Request Body:**
-```json
-{
-  "question": "What challenges do you face at work?",
   "response": "I struggle with time management and communication with my team."
 }
 ```
@@ -131,11 +100,54 @@ Generates a single reason-based follow-up question for deeper understanding.
 **Response:**
 ```json
 {
-  "question": "What specific factors contribute to your time management challenges?",
+  "question": "Why do you think time management and communication are challenging for you?",
   "original_question": "What challenges do you face at work?",
   "original_response": "I struggle with time management and communication with my team."
 }
 ```
+
+### 6. Generate Multilingual Question
+**POST** `/generate-multilingual`
+
+Generates a single follow-up question in the specified language. The original question and response should be in the same language as the target language.
+
+**Request Body:**
+```json
+{
+  "question": "你在工作中面临什么挑战？",
+  "response": "我在时间管理和沟通方面有困难。",
+  "type": "reason",
+  "language": "Chinese"
+}
+```
+
+**Response:**
+```json
+{
+  "question": "为什么你觉得时间管理和沟通对你来说是挑战呢？",
+  "original_question": "你在工作中面临什么挑战？",
+  "original_response": "我在时间管理和沟通方面有困难。",
+  "type": "reason",
+  "language": "Chinese"
+}
+```
+
+**Supported Languages:**
+- Chinese (中文)
+- Japanese (日本語)
+- Spanish (Español)
+- French (Français)
+- German (Deutsch)
+- Korean (한국어)
+- And more (any language DeepSeek supports)
+
+**Supported Question Types:**
+- `reason` - Ask why
+- `impact` - Ask about effects
+- `elaboration` - Ask for details
+- `example` - Ask for examples
+- `clarification` - Ask for clarification
+- `comparison` - Ask for comparison
 
 ## 🔧 Integration Guide
 
