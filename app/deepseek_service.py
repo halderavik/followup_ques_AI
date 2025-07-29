@@ -257,7 +257,7 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Generate 1 follow-up question in {language}. Return only the question text, no JSON."
+                    "content": f"The original question and response are in {language}. Generate 1 follow-up question in {language}. Return only the question text, no JSON."
                 },
                 {
                     "role": "user",
@@ -307,8 +307,8 @@ class DeepSeekService:
         Build optimized prompt for multilingual question generation.
 
         Args:
-            question (str): The original survey question.
-            response (str): The user's answer.
+            question (str): The original survey question (in the target language).
+            response (str): The user's answer (in the target language).
             question_type (str): The type of follow-up question.
             language (str): The target language.
 
@@ -318,7 +318,7 @@ class DeepSeekService:
         # Optimized prompt for fast multilingual generation
         type_instructions = {
             "reason": "ask why",
-            "impact": "ask about effects",
+            "impact": "ask about effects", 
             "elaboration": "ask for details",
             "example": "ask for examples",
             "clarification": "ask for clarification",
@@ -327,4 +327,6 @@ class DeepSeekService:
         
         instruction = type_instructions.get(question_type.lower(), "ask a follow-up")
         
-        return f"Q: {question} A: {response}. {instruction} in {language}." 
+        # Since question and response are already in the target language,
+        # we just need to ask for a follow-up question in the same language
+        return f"Question: {question} Answer: {response}. Generate 1 {instruction} question in {language}." 

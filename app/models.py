@@ -64,13 +64,13 @@ class MultilingualQuestionRequest(BaseModel):
     Request model for generating a single multilingual follow-up question.
 
     Args:
-        question (str): The original survey question.
-        response (str): The user's answer to the survey question.
+        question (str): The original survey question (in the target language).
+        response (str): The user's answer to the survey question (in the target language).
         type (str): The type of follow-up question (reason, impact, elaboration, etc.).
         language (str): The target language for the response (e.g., "Chinese", "Japanese", "Spanish").
     """
-    question: str = Field(..., description="The original survey question.")
-    response: str = Field(..., description="The user's answer to the survey question.")
+    question: str = Field(..., description="The original survey question (in the target language).")
+    response: str = Field(..., description="The user's answer to the survey question (in the target language).")
     type: str = Field(..., description="The type of follow-up question.")
     language: str = Field(..., description="The target language for the response.")
 
