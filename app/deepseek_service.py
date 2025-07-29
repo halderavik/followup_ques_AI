@@ -20,9 +20,9 @@ class DeepSeekService:
     Service class for interacting with the DeepSeek LLM API.
     """
     API_URL = "https://api.deepseek.com/v1/chat/completions"
-    TIMEOUT = 5  # Ultra-aggressive timeout - fail fast
-    RETRIES = 0   # No retries for fastest response
-    MAX_TOKENS = 80  # Ultra-reduced for fastest generation
+    TIMEOUT = 25  # Increased for reliability - prioritize working over speed
+    RETRIES = 1   # Add back retries for reliability
+    MAX_TOKENS = 80  # Keep optimized tokens
 
     def __init__(self):
         """
@@ -37,12 +37,12 @@ class DeepSeekService:
         # Create a session with connection pooling for better performance
         self.session = requests.Session()
         
-        # Configure retry strategy
+        # Configure retry strategy for reliability
         retry_strategy = Retry(
             total=self.RETRIES,
             status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["POST"],  # Updated from method_whitelist
-            backoff_factor=0.1  # Reduced from 0.5 for faster retries
+            allowed_methods=["POST"],
+            backoff_factor=0.3  # Balanced backoff for reliability
         )
         
         # Configure adapter with ultra-optimized connection pooling
@@ -124,12 +124,12 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.0,  # Ultra-low for fastest, most consistent generation
+            "temperature": 0.3,  # Balanced for reliability and speed
             "max_tokens": self.MAX_TOKENS,
-            "top_p": 0.8,        # Reduced from 0.9 for faster generation
+            "top_p": 0.9,        # Back to standard for reliability
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
-            "stream": False      # Ensure no streaming for faster response
+            "stream": False      # Keep no streaming for faster response
         }
         try:
             response = self.session.post(
@@ -275,12 +275,12 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.0,  # Ultra-low for fastest, most consistent multilingual output
-            "max_tokens": 60,     # Ultra-reduced from 100 for fastest single question generation
-            "top_p": 0.8,        # Reduced from 0.9 for faster generation
+            "temperature": 0.2,  # Balanced for reliability and speed
+            "max_tokens": 80,     # Keep optimized but reliable
+            "top_p": 0.9,        # Back to standard for reliability
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
-            "stream": False      # Ensure no streaming for faster response
+            "stream": False      # Keep no streaming for faster response
         }
 
         try:
