@@ -20,9 +20,9 @@ class DeepSeekService:
     Service class for interacting with the DeepSeek LLM API.
     """
     API_URL = "https://api.deepseek.com/v1/chat/completions"
-    TIMEOUT = 8  # Reduced from 15 to 8 seconds for faster failure detection
+    TIMEOUT = 5  # Ultra-aggressive timeout - fail fast
     RETRIES = 0   # No retries for fastest response
-    MAX_TOKENS = 150  # Reduced from 300 for faster generation
+    MAX_TOKENS = 80  # Ultra-reduced for fastest generation
 
     def __init__(self):
         """
@@ -45,11 +45,11 @@ class DeepSeekService:
             backoff_factor=0.1  # Reduced from 0.5 for faster retries
         )
         
-        # Configure adapter with optimized connection pooling
+        # Configure adapter with ultra-optimized connection pooling
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
-            pool_connections=20,  # Increased from 10
-            pool_maxsize=50,      # Increased from 20
+            pool_connections=50,  # Increased from 20
+            pool_maxsize=100,     # Increased from 50
             pool_block=False      # Don't block on connection pool exhaustion
         )
         
@@ -64,7 +64,7 @@ class DeepSeekService:
         
         # Simple in-memory cache for performance
         self.cache = {}
-        self.cache_ttl = 1800  # Reduced from 3600 to 30 minutes for faster cache invalidation
+        self.cache_ttl = 900  # Reduced from 1800 to 15 minutes for faster cache invalidation
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -124,11 +124,12 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.2,  # Reduced from 0.5 for faster, more consistent generation
+            "temperature": 0.0,  # Ultra-low for fastest, most consistent generation
             "max_tokens": self.MAX_TOKENS,
-            "top_p": 0.9,        # Added for faster generation
-            "frequency_penalty": 0.0,  # Added to reduce repetition
-            "presence_penalty": 0.0    # Added to reduce repetition
+            "top_p": 0.8,        # Reduced from 0.9 for faster generation
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False      # Ensure no streaming for faster response
         }
         try:
             response = self.session.post(
@@ -230,7 +231,7 @@ class DeepSeekService:
         Returns:
             str: The formatted prompt.
         """
-        # Ultra-optimized prompt for fastest processing
+        # Ultra-minimal prompt for fastest processing
         types_str = f" Types: {','.join(allowed_types)}" if allowed_types else ""
         return f"Q: {question} A: {response}{types_str}. Generate 2-3 questions."
 
@@ -267,18 +268,19 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Generate 1 follow-up question in {language}. Return only the question text."
+                    "content": f"Generate 1 question in {language}. Return only the question text."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.1,  # Reduced from 0.3 for faster, more consistent multilingual output
-            "max_tokens": 100,    # Reduced from 150 for faster single question generation
-            "top_p": 0.9,        # Added for faster generation
-            "frequency_penalty": 0.0,  # Added to reduce repetition
-            "presence_penalty": 0.0    # Added to reduce repetition
+            "temperature": 0.0,  # Ultra-low for fastest, most consistent multilingual output
+            "max_tokens": 60,     # Ultra-reduced from 100 for fastest single question generation
+            "top_p": 0.8,        # Reduced from 0.9 for faster generation
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False      # Ensure no streaming for faster response
         }
 
         try:
@@ -328,18 +330,18 @@ class DeepSeekService:
         Returns:
             str: The formatted multilingual prompt.
         """
-        # Ultra-optimized prompt for fastest multilingual generation
+        # Ultra-minimal prompt for fastest multilingual generation
         type_instructions = {
-            "reason": "ask why",
-            "impact": "ask about effects", 
-            "elaboration": "ask for details",
-            "example": "ask for examples",
-            "clarification": "ask for clarification",
-            "comparison": "ask for comparison"
+            "reason": "why",
+            "impact": "effects", 
+            "elaboration": "details",
+            "example": "examples",
+            "clarification": "clarify",
+            "comparison": "compare"
         }
         
-        instruction = type_instructions.get(question_type.lower(), "ask a follow-up")
+        instruction = type_instructions.get(question_type.lower(), "follow-up")
         
         # Since question and response are already in the target language,
         # we just need to ask for a follow-up question in the same language
-        return f"Q: {question} A: {response}. Generate 1 {instruction} question in {language}." 
+        return f"Q: {question} A: {response}. Ask {instruction} in {language}." 
