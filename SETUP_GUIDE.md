@@ -54,9 +54,19 @@ curl -X POST http://localhost:5000/generate-followup \
     "question": "What challenges do you face at work?",
     "response": "I struggle with time management and communication."
   }'
+
+# Test enhanced multilingual with informativeness detection
+curl -X POST http://localhost:5000/generate-enhanced-multilingual \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What challenges do you face at work?",
+    "response": "I don't know",
+    "type": "reason",
+    "language": "English"
+  }'
 ```
 
-**Expected Response:**
+**Expected Response (Basic):**
 ```json
 {
   "followups": [
@@ -73,6 +83,18 @@ curl -X POST http://localhost:5000/generate-followup \
       "type": "impact"
     }
   ]
+}
+```
+
+**Expected Response (Enhanced Multilingual - Non-informative):**
+```json
+{
+  "informative": 0,
+  "question": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English"
 }
 ```
 

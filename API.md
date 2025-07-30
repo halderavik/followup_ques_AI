@@ -181,6 +181,54 @@ Generates a single follow-up question in the specified language. The original qu
 - `clarification` - Ask for clarification
 - `comparison` - Ask for comparison
 
+### 7. Generate Enhanced Multilingual Question (New)
+**POST** `/generate-enhanced-multilingual`
+
+Generates a single follow-up question in the specified language with informativeness detection. If the response is non-informative, no question is generated.
+
+**Request Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Response (Non-informative):**
+```json
+{
+  "informative": 0,
+  "question": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Response (Informative):**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Informativeness Detection:**
+The API automatically detects non-informative responses such as:
+- "I don't know", "no", "yes", "maybe", "not sure"
+- "我不知道", "不知道", "不", "是" (Chinese)
+- "分かりません", "いいえ", "はい", "たぶん" (Japanese)
+- And similar patterns in other supported languages
+
+When a response is classified as non-informative (`informative: 0`), no follow-up question is generated, saving API calls and improving user experience.
+
 ## 🔧 Integration Guide
 
 ### Qualtrics Integration

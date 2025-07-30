@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from pydantic import ValidationError
-from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse, MultilingualQuestionRequest, MultilingualQuestionResponse
+from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse, MultilingualQuestionRequest, MultilingualQuestionResponse, EnhancedMultilingualRequest, EnhancedMultilingualResponse
 from .question_types import QuestionType
 from .error_models import ErrorResponse, ValidationErrorResponse
 from .deepseek_service import DeepSeekService, DeepSeekAPIError
@@ -34,6 +34,7 @@ def root():
             "generate_followup": "/generate-followup",
             "generate_reason": "/generate-reason",
             "generate_multilingual": "/generate-multilingual",
+            "generate_enhanced_multilingual": "/generate-enhanced-multilingual",
             "performance": "/performance"
         },
         "usage": {
@@ -42,6 +43,7 @@ def root():
             "generate_followup": "POST /generate-followup - Generate follow-up questions",
             "generate_reason": "POST /generate-reason - Generate single reason-based question",
             "generate_multilingual": "POST /generate-multilingual - Generate single multilingual question",
+            "generate_enhanced_multilingual": "POST /generate-enhanced-multilingual - Generate multilingual question with informativeness detection",
             "performance": "GET /performance - Get performance metrics"
         }
     }), 200
@@ -227,6 +229,59 @@ def generate_multilingual():
         
         response = MultilingualQuestionResponse(
             question=question_text,
+            original_question=req.question,
+            original_response=req.response,
+            type=req.type,
+            language=req.language
+        )
+        return jsonify(response.dict()), 200
+    except DeepSeekAPIError as dse:
+        return jsonify(ErrorResponse(
+            detail=str(dse),
+            code="deepseek_error"
+        ).dict()), 502
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Internal server error: {exc}",
+            code="internal_error"
+        ).dict()), 500 
+
+@bp.route('/generate-enhanced-multilingual', methods=['POST'])
+def generate_enhanced_multilingual():
+    """
+    Generate an enhanced multilingual follow-up question with informativeness detection.
+
+    Returns:
+        JSON: Generated multilingual follow-up question with informativeness flag or error.
+    """
+    try:
+        data = request.get_json()
+        req = EnhancedMultilingualRequest(**data)
+    except ValidationError as ve:
+        return jsonify(ValidationErrorResponse(
+            detail="Invalid request data.",
+            code="validation_error",
+            errors=ve.errors()
+        ).dict()), 422
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Malformed request: {exc}",
+            code="bad_request"
+        ).dict()), 400
+
+    service = DeepSeekService()
+    try:
+        # Generate enhanced multilingual question with informativeness detection
+        result = service.generate_enhanced_multilingual_question(
+            req.question, 
+            req.response, 
+            req.type, 
+            req.language
+        )
+        
+        response = EnhancedMultilingualResponse(
+            informative=result["informative"],
+            question=result.get("question"),
             original_question=req.question,
             original_response=req.response,
             type=req.type,

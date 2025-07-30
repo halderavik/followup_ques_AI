@@ -521,4 +521,153 @@ class DeepSeekService:
         
         # Since question and response are already in the target language,
         # we just need to ask for a follow-up question in the same language
-        return f"Q: {question} A: {response}. Ask {instruction} in {language}." 
+        return f"Q: {question} A: {response}. Ask {instruction} in {language}."
+
+    def detect_informativeness(self, question: str, response: str, language: str = "English") -> bool:
+        """
+        Detect if a response is informative enough to warrant follow-up questions.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's answer.
+            language (str): The language of the question and response.
+
+        Returns:
+            bool: True if response is informative, False if non-informative.
+
+        Raises:
+            DeepSeekAPIError: If the API call fails.
+        """
+        # Create cache key for informativeness detection
+        cache_key = self._get_cache_key(f"informativeness:{question}:{response}:{language}")
+        cached_response = self._get_cached_response(cache_key)
+        if cached_response:
+            return cached_response
+
+        # Track performance
+        start_time = time.time()
+        
+        # Build prompt for informativeness detection
+        prompt = self._build_informativeness_prompt(question, response, language)
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"Analyze if the response is informative. Return ONLY '1' for informative or '0' for non-informative."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.1,  # Very low temperature for consistent classification
+            "max_tokens": 10,    # Very short response needed
+            "top_p": 0.9,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False
+        }
+
+        try:
+            response = self.session.post(
+                self.API_URL,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=self.TIMEOUT
+            )
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Extract the classification result
+                content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                if not content:
+                    raise DeepSeekAPIError("No content in informativeness response.")
+                
+                # Parse the result (should be "1" or "0")
+                result = content.strip()
+                is_informative = result == "1"
+                
+                # Cache the result
+                self._cache_response(cache_key, is_informative)
+                
+                # Log performance metrics
+                elapsed_time = time.time() - start_time
+                self.logger.info(f"Informativeness detection completed in {elapsed_time:.2f}s")
+                
+                return is_informative
+            else:
+                self.logger.error(f"DeepSeek API error: {response.status_code} {response.text}")
+                raise DeepSeekAPIError(f"API error: {response.status_code} {response.text}")
+        except (RequestException, Timeout) as exc:
+            self.logger.error(f"Informativeness detection request failed: {exc}")
+            raise DeepSeekAPIError(f"Request failed: {exc}")
+
+    @staticmethod
+    def _build_informativeness_prompt(question: str, response: str, language: str) -> str:
+        """
+        Build prompt for informativeness detection.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's answer.
+            language (str): The language of the question and response.
+
+        Returns:
+            str: The formatted informativeness detection prompt.
+        """
+        # Define non-informative patterns in multiple languages
+        non_informative_patterns = {
+            "English": ["i don't know", "i don't know", "no", "yes", "maybe", "not sure", "unsure", "idk", "dunno", "n/a", "none", "nothing"],
+            "Chinese": ["我不知道", "不知道", "不", "是", "也许", "不确定", "不清楚", "没有", "无", "不晓得"],
+            "Japanese": ["わかりません", "知りません", "いいえ", "はい", "たぶん", "わからない", "不明", "なし", "無し"],
+            "Spanish": ["no sé", "no lo sé", "no", "sí", "tal vez", "no estoy seguro", "no estoy segura", "ninguno", "nada"],
+            "French": ["je ne sais pas", "je ne sais pas", "non", "oui", "peut-être", "pas sûr", "pas sûre", "aucun", "rien"],
+            "German": ["ich weiß nicht", "weiß nicht", "nein", "ja", "vielleicht", "nicht sicher", "keiner", "nichts"],
+            "Korean": ["모르겠어요", "모름", "아니요", "네", "아마", "불확실", "없음", "아무것도"]
+        }
+        
+        # Get patterns for the specific language, default to English
+        patterns = non_informative_patterns.get(language, non_informative_patterns["English"])
+        patterns_str = ", ".join(patterns)
+        
+        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Non-informative responses include: {patterns_str}. Return '1' for informative or '0' for non-informative."
+
+    def generate_enhanced_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> dict:
+        """
+        Generate an enhanced multilingual follow-up question with informativeness detection.
+
+        Args:
+            question (str): The original survey question (in the target language).
+            response (str): The user's answer (in the target language).
+            question_type (str): The type of follow-up question.
+            language (str): The target language.
+
+        Returns:
+            dict: Dictionary with 'informative' flag and optional 'question' field.
+
+        Raises:
+            DeepSeekAPIError: If the API call fails.
+        """
+        # First, detect if the response is informative
+        is_informative = self.detect_informativeness(question, response, language)
+        
+        if not is_informative:
+            # Return response indicating non-informative response
+            return {
+                "informative": 0,
+                "question": None
+            }
+        
+        # If informative, generate the follow-up question
+        try:
+            question_text = self.generate_multilingual_question(question, response, question_type, language)
+            return {
+                "informative": 1,
+                "question": question_text
+            }
+        except DeepSeekAPIError as e:
+            # If question generation fails, still return informative=1 but with error
+            self.logger.error(f"Failed to generate question for informative response: {e}")
+            raise e 

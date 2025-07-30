@@ -89,4 +89,38 @@ class MultilingualQuestionResponse(BaseModel):
     original_question: str = Field(..., description="The original survey question.")
     original_response: str = Field(..., description="The original user response.")
     type: str = Field(..., description="The type of follow-up question generated.")
+    language: str = Field(..., description="The language of the generated question.")
+
+class EnhancedMultilingualRequest(BaseModel):
+    """
+    Request model for enhanced multilingual follow-up question generation with informativeness detection.
+
+    Args:
+        question (str): The original survey question (in the target language).
+        response (str): The user's answer to the survey question (in the target language).
+        type (str): The type of follow-up question (reason, impact, elaboration, etc.).
+        language (str): The target language for the response (e.g., "Chinese", "Japanese", "Spanish").
+    """
+    question: str = Field(..., description="The original survey question (in the target language).")
+    response: str = Field(..., description="The user's answer to the survey question (in the target language).")
+    type: str = Field(..., description="The type of follow-up question.")
+    language: str = Field(..., description="The target language for the response.")
+
+class EnhancedMultilingualResponse(BaseModel):
+    """
+    Response model for enhanced multilingual follow-up question with informativeness detection.
+
+    Args:
+        informative (int): 1 if response is informative, 0 if non-informative.
+        question (Optional[str]): The generated follow-up question (only if informative=1).
+        original_question (str): The original survey question.
+        original_response (str): The original user response.
+        type (str): The type of follow-up question requested.
+        language (str): The language of the generated question.
+    """
+    informative: int = Field(..., description="1 if response is informative, 0 if non-informative.")
+    question: Optional[str] = Field(None, description="The generated follow-up question (only if informative=1).")
+    original_question: str = Field(..., description="The original survey question.")
+    original_response: str = Field(..., description="The original user response.")
+    type: str = Field(..., description="The type of follow-up question requested.")
     language: str = Field(..., description="The language of the generated question.") 

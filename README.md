@@ -1,16 +1,19 @@
 # Survey Intelligence API - MVP
 
 ## Overview
-This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact.
+This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact. The API also includes enhanced multilingual support with informativeness detection.
 
 ## Features
 - AI-powered question generation (DeepSeek LLM)
 - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
+- **Enhanced multilingual support** with informativeness detection
+- **Informativeness detection** - automatically detects non-informative responses (e.g., "I don't know", "no")
 - Simple REST API (JSON)
 - No authentication required for users
 - Comprehensive error handling
 - Intelligent follow-up question generation
 - Type mapping and fallback mechanisms for reliable output
+- Support for multiple languages (English, Chinese, Japanese, Spanish, French, German, Korean)
 
 ## Tech Stack
 - Python 3.9+
@@ -127,7 +130,77 @@ Generates exactly 3 intelligent follow-up questions based on survey responses wi
 }
 ```
 
+### POST `/generate-multilingual`
+Generates a single follow-up question in the specified language.
+
+**Request Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Response:**
+```json
+{
+  "question": "Why do you struggle with time management?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+### POST `/generate-enhanced-multilingual` (New)
+Generates a single follow-up question in the specified language with informativeness detection. If the response is non-informative, no question is generated.
+
+**Request Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Response (Non-informative):**
+```json
+{
+  "informative": 0,
+  "question": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Response (Informative):**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
 **Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact. The `allowed_types` parameter is no longer used as the types are fixed.
+
+## Supported Languages
+- English
+- Chinese (中文)
+- Japanese (日本語)
+- Spanish (Español)
+- French (Français)
+- German (Deutsch)
+- Korean (한국어)
 
 ## License
 MIT (or specify as appropriate) 

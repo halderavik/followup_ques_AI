@@ -34,12 +34,16 @@ The app should be running on `http://localhost:5000`
   "endpoints": {
     "health": "/health",
     "question_types": "/question-types",
-    "generate_followup": "/generate-followup"
+    "generate_followup": "/generate-followup",
+    "generate_multilingual": "/generate-multilingual",
+    "generate_enhanced_multilingual": "/generate-enhanced-multilingual"
   },
   "usage": {
     "health": "GET /health - Check API status",
     "question_types": "GET /question-types - Get available question types",
-    "generate_followup": "POST /generate-followup - Generate follow-up questions"
+    "generate_followup": "POST /generate-followup - Generate follow-up questions",
+    "generate_multilingual": "POST /generate-multilingual - Generate multilingual questions",
+    "generate_enhanced_multilingual": "POST /generate-enhanced-multilingual - Generate multilingual questions with informativeness detection"
   }
 }
 ```
@@ -211,6 +215,110 @@ Content-Type: application/json
 
 **Purpose:** Test input validation
 
+---
+
+### 6. Generate Multilingual Question
+**Request:** `POST http://localhost:5000/generate-multilingual`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "question": "Why do you struggle with time management?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management.",
+  "type": "reason",
+  "language": "English"
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test multilingual question generation
+
+---
+
+### 7. Generate Enhanced Multilingual Question - Informative Response
+**Request:** `POST http://localhost:5000/generate-enhanced-multilingual`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management and communication?",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English"
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test enhanced multilingual with informative response
+
+---
+
+### 8. Generate Enhanced Multilingual Question - Non-informative Response
+**Request:** `POST http://localhost:5000/generate-enhanced-multilingual`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "informative": 0,
+  "question": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English"
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test enhanced multilingual with non-informative response (informativeness detection)
+
 ## Testing Workflow
 
 1. **Start with API Information** - Get overview of available endpoints
@@ -218,6 +326,8 @@ Content-Type: application/json
 3. **Get Question Types** - See available question types
 4. **Test Validation** - Try the "Invalid Data" request to see 422 error
 5. **Test Main Functionality** - Try the basic and with-types requests to see generated questions
+6. **Test Multilingual** - Test the multilingual endpoint
+7. **Test Enhanced Multilingual** - Test both informative and non-informative responses
 
 ## Expected Behavior Summary
 
@@ -228,6 +338,8 @@ Content-Type: application/json
 | `/question-types` | No | 200 | Returns all 6 question types |
 | `/generate-followup` | No | 200 | Returns intelligent follow-up questions |
 | `/generate-followup` (invalid data) | No | 422 | Validation error |
+| `/generate-multilingual` | No | 200 | Returns multilingual follow-up question |
+| `/generate-enhanced-multilingual` | No | 200 | Returns enhanced multilingual with informativeness detection |
 
 ## Troubleshooting
 

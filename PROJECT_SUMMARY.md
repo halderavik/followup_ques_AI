@@ -21,6 +21,7 @@ The Survey Intelligence API is a fully functional Flask-based REST API that gene
    - `POST /generate-followup` - Generate exactly 3 intelligent follow-up questions
    - `POST /generate-reason` - Generate single reason-based question
    - `POST /generate-multilingual` - Generate multilingual questions
+   - `POST /generate-enhanced-multilingual` - Generate multilingual questions with informativeness detection
 
 3. **User-Friendly Architecture**
    - No authentication required for users
@@ -184,10 +185,10 @@ AI_followup_ques/
 
 ### Long Term (Post-MVP)
 1. **Enhancements**
-   - Multi-language support
    - Advanced analytics
    - Survey platform integrations
    - Custom question templates
+   - Additional language support
 
 2. **Scaling**
    - Load balancing
@@ -199,6 +200,7 @@ AI_followup_ques/
 
 - ✅ **Complete MVP** with all core features
 - ✅ **Working DeepSeek Integration** with intelligent question generation
+- ✅ **Enhanced Multilingual Support** with informativeness detection
 - ✅ **User-Friendly API** with no authentication complexity
 - ✅ **Comprehensive Testing** and documentation
 - ✅ **Production-Ready Architecture** with proper error handling

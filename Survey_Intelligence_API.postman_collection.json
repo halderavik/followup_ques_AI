@@ -156,6 +156,96 @@
 				"description": "Test validation error - should return 422"
 			},
 			"response": []
+		},
+		{
+			"name": "Generate Multilingual Question",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"What challenges do you face at work?\",\n  \"response\": \"I struggle with time management.\",\n  \"type\": \"reason\",\n  \"language\": \"English\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-multilingual",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-multilingual"
+					]
+				},
+				"description": "Generate a single follow-up question in the specified language"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Enhanced Multilingual - Informative",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"What challenges do you face at work?\",\n  \"response\": \"I struggle with time management and communication.\",\n  \"type\": \"reason\",\n  \"language\": \"English\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-enhanced-multilingual",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-enhanced-multilingual"
+					]
+				},
+				"description": "Generate enhanced multilingual question with informative response"
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Enhanced Multilingual - Non-informative",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"question\": \"What challenges do you face at work?\",\n  \"response\": \"I don't know\",\n  \"type\": \"reason\",\n  \"language\": \"English\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/generate-enhanced-multilingual",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"generate-enhanced-multilingual"
+					]
+				},
+				"description": "Test enhanced multilingual with non-informative response (informativeness detection)"
+			},
+			"response": []
 		}
 	],
 	"variable": [
