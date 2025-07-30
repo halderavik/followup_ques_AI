@@ -44,7 +44,9 @@ Returns basic API information and available endpoints.
     "question_types": "/question-types",
     "generate_followup": "/generate-followup",
     "generate_reason": "/generate-reason",
-    "generate_multilingual": "/generate-multilingual"
+    "generate_multilingual": "/generate-multilingual",
+    "generate_enhanced_multilingual": "/generate-enhanced-multilingual",
+    "generate_theme_enhanced": "/generate-theme-enhanced"
   }
 }
 ```
@@ -181,7 +183,7 @@ Generates a single follow-up question in the specified language. The original qu
 - `clarification` - Ask for clarification
 - `comparison` - Ask for comparison
 
-### 7. Generate Enhanced Multilingual Question (New)
+### 7. Generate Enhanced Multilingual Question
 **POST** `/generate-enhanced-multilingual`
 
 Generates a single follow-up question in the specified language with informativeness detection. If the response is non-informative, no question is generated.
@@ -228,6 +230,113 @@ The API automatically detects non-informative responses such as:
 - And similar patterns in other supported languages
 
 When a response is classified as non-informative (`informative: 0`), no follow-up question is generated, saving API calls and improving user experience.
+
+### 🆕 8. Generate Theme-Enhanced Question
+**POST** `/generate-theme-enhanced`
+
+**NEW!** Generates a theme-enhanced multilingual follow-up question with intelligent theme analysis. Detects themes in responses and generates contextually relevant questions based on theme importance.
+
+**Request Body (Theme Analysis Enabled):**
+```json
+{
+  "question": "How do you communicate with your team?",
+  "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Response (Theme Found):**
+```json
+{
+  "informative": 1,
+  "question": "Can you give an example of a situation where face-to-face meetings were more effective than digital communication for your team?",
+  "explanation": "This question focuses on the theme of 'communication' by asking the user to elaborate on their preference for face-to-face interactions. It follows the 'elaboration' question type by requesting a specific example, which helps deepen understanding of when and why in-person communication is preferred over digital tools like email or Slack.",
+  "original_question": "How do you communicate with your team?",
+  "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": "communication",
+  "theme_importance": 80,
+  "highest_importance_theme": null
+}
+```
+
+**Request Body (Standard Mode - No Theme Analysis):**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No"
+}
+```
+
+**Response (Standard Mode):**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management and communication at work?",
+  "explanation": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": null
+}
+```
+
+**Response (No Theme Found - Uses Highest Importance Theme):**
+```json
+{
+  "informative": 1,
+  "question": "Do you think the calming effect of blue relates to how it might influence communication or social interactions?",
+  "explanation": "This question gently introduces the missing theme of 'communication' by connecting it to the user's stated preference for blue. It invites them to reflect on whether color preferences might extend beyond personal feelings to interpersonal dynamics, thereby addressing the important theme indirectly.",
+  "original_question": "What's your favorite color?",
+  "original_response": "I like blue because it's calming.",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": "communication"
+}
+```
+
+## 🎯 Theme-Enhanced API Features
+
+### Theme Detection
+- Automatically detects themes in survey responses
+- Ranks themes by importance (0-100%)
+- Generates questions based on detected themes
+
+### Missing Theme Handling
+- When no themes are found, asks about highest importance theme
+- Provides graceful fallback mechanisms
+- Maintains conversation flow
+
+### Multilingual Theme Support
+- Theme detection works across all supported languages
+- Generates culturally appropriate questions
+- Maintains language consistency
+
+### Explanation Generation
+- Provides detailed explanations for question generation
+- Explains theme detection and reasoning
+- Helps understand AI decision-making
 
 ## 🔧 Integration Guide
 
@@ -288,6 +397,41 @@ Qualtrics.SurveyEngine.addOnload(function() {
 });
 ```
 
+#### Method 3: Theme-Enhanced Integration
+```javascript
+// Theme-enhanced integration for employee surveys
+Qualtrics.SurveyEngine.addOnload(function() {
+    var response = $('QR~QID1').value;
+    
+    fetch('https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            question: "How satisfied are you with your work environment?",
+            response: response,
+            type: "elaboration",
+            language: "English",
+            theme: "Yes",
+            theme_parameters: {
+                themes: [
+                    {"name": "communication", "importance": 85},
+                    {"name": "work_life_balance", "importance": 75},
+                    {"name": "teamwork", "importance": 70}
+                ]
+            }
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.informative === 1) {
+            Qualtrics.SurveyEngine.setEmbeddedData('theme_question', data.question);
+            Qualtrics.SurveyEngine.setEmbeddedData('detected_theme', data.detected_theme);
+            Qualtrics.SurveyEngine.setEmbeddedData('theme_importance', data.theme_importance);
+        }
+    });
+});
+```
+
 ### SurveyMonkey Integration
 
 #### Using SurveyMonkey Webhooks
@@ -339,6 +483,26 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reas
   -d '{
     "question": "What challenges do you face at work?",
     "response": "I struggle with time management and communication."
+  }'
+```
+
+#### cURL Example for Theme-Enhanced API
+```bash
+curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "How do you communicate with your team?",
+    "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+    "type": "elaboration",
+    "language": "English",
+    "theme": "Yes",
+    "theme_parameters": {
+      "themes": [
+        {"name": "communication", "importance": 80},
+        {"name": "leadership", "importance": 60},
+        {"name": "collaboration", "importance": 70}
+      ]
+    }
   }'
 ```
 
@@ -411,6 +575,57 @@ try:
 except Exception as e:
     print(f"Error: {e}")
 
+# Theme-enhanced API example
+def generate_theme_enhanced_question(question, response, theme_parameters):
+    url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced"
+    
+    payload = {
+        "question": question,
+        "response": response,
+        "type": "elaboration",
+        "language": "English",
+        "theme": "Yes",
+        "theme_parameters": theme_parameters
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"API Error: {response.status_code}")
+
+# Usage example for theme-enhanced API
+try:
+    theme_params = {
+        "themes": [
+            {"name": "communication", "importance": 80},
+            {"name": "leadership", "importance": 60},
+            {"name": "collaboration", "importance": 70}
+        ]
+    }
+    
+    result = generate_theme_enhanced_question(
+        question="How do you communicate with your team?",
+        response="I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+        theme_parameters=theme_params
+    )
+    
+    if result['informative'] == 1:
+        print(f"Detected theme: {result.get('detected_theme')}")
+        print(f"Theme importance: {result.get('theme_importance')}%")
+        print(f"Generated question: {result['question']}")
+        print(f"Explanation: {result.get('explanation')}")
+    else:
+        print("Response was not informative enough")
+        
+except Exception as e:
+    print(f"Error: {e}")
+
 #### JavaScript/Node.js Example
 ```javascript
 const axios = require('axios');
@@ -454,7 +669,6 @@ async function main() {
 }
 
 main();
-```
 
 // Single reason question example
 async function generateSingleReasonQuestion(question, response) {
@@ -490,6 +704,62 @@ generateSingleReasonQuestion(
 .catch(error => {
     console.error('Error:', error);
 });
+
+// Theme-enhanced API example
+async function generateThemeEnhancedQuestion(question, response, themeParameters) {
+    try {
+        const result = await axios.post(
+            'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced',
+            {
+                question: question,
+                response: response,
+                type: "elaboration",
+                language: "English",
+                theme: "Yes",
+                theme_parameters: themeParameters
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        return result.data;
+    } catch (error) {
+        console.error('API Error:', error.response?.data || error.message);
+        throw error;
+    }
+}
+
+// Usage example for theme-enhanced API
+const themeParams = {
+    themes: [
+        {name: "communication", importance: 80},
+        {name: "leadership", importance: 60},
+        {name: "collaboration", importance: 70}
+    ]
+};
+
+generateThemeEnhancedQuestion(
+    "How do you communicate with your team?",
+    "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+    themeParams
+)
+.then(result => {
+    if (result.informative === 1) {
+        console.log(`Detected theme: ${result.detected_theme}`);
+        console.log(`Theme importance: ${result.theme_importance}%`);
+        console.log(`Generated question: ${result.question}`);
+        console.log(`Explanation: ${result.explanation}`);
+    } else {
+        console.log("Response was not informative enough");
+    }
+})
+.catch(error => {
+    console.error('Error:', error);
+});
+```
 
 ## 📋 Question Types Reference
 
@@ -543,6 +813,32 @@ generateSingleReasonQuestion(
 **Generated Reason Question:**
 "Why do you find the interface confusing and slow?"
 
+### Theme-Enhanced Example
+```json
+{
+  "question": "How do you handle team conflicts?",
+  "response": "I try to communicate openly and lead by example to foster collaboration.",
+  "type": "impact",
+  "language": "English",
+  "theme": "Yes",
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 90},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Generated Theme-Enhanced Question:**
+"What positive impacts have you observed in your team as a result of your leadership approach to handling conflicts?"
+
+**Theme Analysis:**
+- Detected theme: "leadership" (90% importance)
+- Generated impact-focused question
+- Provided explanation for question generation
+
 ## ⚠️ Error Handling
 
 ### Common Error Responses
@@ -581,7 +877,7 @@ generateSingleReasonQuestion(
 ## 📊 Rate Limits & Performance
 
 - **No rate limits** currently applied
-- **Response time**: Typically 2-5 seconds
+- **Response time**: Typically 6-7 seconds
 - **Availability**: 99.9% uptime
 - **Recommended**: Implement client-side caching for repeated requests
 
@@ -605,6 +901,7 @@ For technical support or questions about integration:
 - [ ] Review available question types: `GET /question-types`
 - [ ] Test with a sample request: `POST /generate-followup`
 - [ ] Test single reason question: `POST /generate-reason`
+- [ ] Test theme-enhanced API: `POST /generate-theme-enhanced`
 - [ ] Choose your integration method (JavaScript, webhooks, etc.)
 - [ ] Implement error handling
 - [ ] Test with real survey data

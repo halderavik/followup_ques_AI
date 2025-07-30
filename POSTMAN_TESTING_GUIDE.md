@@ -319,6 +319,143 @@ Content-Type: application/json
 
 **Purpose:** Test enhanced multilingual with non-informative response (informativeness detection)
 
+---
+
+### 9. Generate Theme-Enhanced Question - Theme Found
+**Request:** `POST http://localhost:5000/generate-theme-enhanced`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "How do you communicate with your team?",
+  "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Expected Response:**
+```json
+{
+  "informative": 1,
+  "question": "Can you give an example of a situation where face-to-face meetings were more effective than digital communication for your team?",
+  "explanation": "This question focuses on the theme of 'communication' by asking the user to elaborate on their preference for face-to-face interactions...",
+  "original_question": "How do you communicate with your team?",
+  "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": "communication",
+  "theme_importance": 80,
+  "highest_importance_theme": null
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test theme-enhanced API with theme detection
+
+---
+
+### 10. Generate Theme-Enhanced Question - No Theme Found
+**Request:** `POST http://localhost:5000/generate-theme-enhanced`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "What's your favorite color?",
+  "response": "I like blue because it's calming.",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Expected Response:**
+```json
+{
+  "informative": 1,
+  "question": "Do you think the calming effect of blue relates to how it might influence communication or social interactions?",
+  "explanation": "This question gently introduces the missing theme of 'communication' by connecting it to the user's stated preference...",
+  "original_question": "What's your favorite color?",
+  "original_response": "I like blue because it's calming.",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": "communication"
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test theme-enhanced API when no theme is found (uses highest importance theme)
+
+---
+
+### 11. Generate Theme-Enhanced Question - Standard Mode
+**Request:** `POST http://localhost:5000/generate-theme-enhanced`
+
+**Headers:**
+```
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No"
+}
+```
+
+**Expected Response:**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management and communication at work?",
+  "explanation": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": null
+}
+```
+**Status Code:** 200
+
+**Purpose:** Test theme-enhanced API in standard mode (no theme analysis)
+
 ## Testing Workflow
 
 1. **Start with API Information** - Get overview of available endpoints
@@ -328,6 +465,7 @@ Content-Type: application/json
 5. **Test Main Functionality** - Try the basic and with-types requests to see generated questions
 6. **Test Multilingual** - Test the multilingual endpoint
 7. **Test Enhanced Multilingual** - Test both informative and non-informative responses
+8. **Test Theme-Enhanced API** - Test theme detection, missing themes, and standard mode
 
 ## Expected Behavior Summary
 
@@ -340,6 +478,7 @@ Content-Type: application/json
 | `/generate-followup` (invalid data) | No | 422 | Validation error |
 | `/generate-multilingual` | No | 200 | Returns multilingual follow-up question |
 | `/generate-enhanced-multilingual` | No | 200 | Returns enhanced multilingual with informativeness detection |
+| `/generate-theme-enhanced` | No | 200 | Returns theme-enhanced questions with theme analysis |
 
 ## Troubleshooting
 

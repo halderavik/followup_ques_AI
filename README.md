@@ -1,13 +1,15 @@
 # Survey Intelligence API - MVP
 
 ## Overview
-This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact. The API also includes enhanced multilingual support with informativeness detection.
+This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact. The API also includes enhanced multilingual support with informativeness detection and **theme-enhanced analysis**.
 
 ## Features
 - AI-powered question generation (DeepSeek LLM)
 - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
 - **Enhanced multilingual support** with informativeness detection
+- **🆕 Theme-enhanced analysis** - detects themes in responses and generates contextually relevant questions
 - **Informativeness detection** - automatically detects non-informative responses (e.g., "I don't know", "no")
+- **Theme detection and ranking** - identifies themes by importance and generates targeted questions
 - Simple REST API (JSON)
 - No authentication required for users
 - Comprehensive error handling
@@ -22,6 +24,9 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
 - Requests 2.31.0
 - python-dotenv
 - pytest, Black, Flake8
+
+## 🚀 Live Deployment
+**Production URL:** `https://follow-up-question-f00b29aae45c.herokuapp.com/`
 
 ## Setup Instructions
 1. Clone the repository and navigate to the project directory.
@@ -154,7 +159,7 @@ Generates a single follow-up question in the specified language.
 }
 ```
 
-### POST `/generate-enhanced-multilingual` (New)
+### POST `/generate-enhanced-multilingual`
 Generates a single follow-up question in the specified language with informativeness detection. If the response is non-informative, no question is generated.
 
 **Request Body:**
@@ -191,7 +196,110 @@ Generates a single follow-up question in the specified language with informative
 }
 ```
 
-**Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact. The `allowed_types` parameter is no longer used as the types are fixed.
+### 🆕 POST `/generate-theme-enhanced`
+**NEW!** Generates a theme-enhanced multilingual follow-up question with intelligent theme analysis. Detects themes in responses and generates contextually relevant questions based on theme importance.
+
+**Request Body (Theme Analysis Enabled):**
+```json
+{
+  "question": "How do you communicate with your team?",
+  "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Response (Theme Found):**
+```json
+{
+  "informative": 1,
+  "question": "Can you give an example of a situation where face-to-face meetings were more effective than digital communication for your team?",
+  "explanation": "This question focuses on the theme of 'communication' by asking the user to elaborate on their preference for face-to-face interactions...",
+  "original_question": "How do you communicate with your team?",
+  "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": "communication",
+  "theme_importance": 80,
+  "highest_importance_theme": null
+}
+```
+
+**Request Body (Standard Mode - No Theme Analysis):**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No"
+}
+```
+
+**Response (Standard Mode):**
+```json
+{
+  "informative": 1,
+  "question": "Why do you struggle with time management and communication at work?",
+  "explanation": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": null
+}
+```
+
+**Response (No Theme Found - Uses Highest Importance Theme):**
+```json
+{
+  "informative": 1,
+  "question": "Do you think the calming effect of blue relates to how it might influence communication or social interactions?",
+  "explanation": "This question gently introduces the missing theme of 'communication' by connecting it to the user's stated preference...",
+  "original_question": "What's your favorite color?",
+  "original_response": "I like blue because it's calming.",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": "communication"
+}
+```
+
+## 🎯 Theme-Enhanced API Features
+
+### Theme Detection
+- Automatically detects themes in survey responses
+- Ranks themes by importance (0-100%)
+- Generates questions based on detected themes
+
+### Missing Theme Handling
+- When no themes are found, asks about highest importance theme
+- Provides graceful fallback mechanisms
+- Maintains conversation flow
+
+### Multilingual Theme Support
+- Theme detection works across all supported languages
+- Generates culturally appropriate questions
+- Maintains language consistency
+
+### Explanation Generation
+- Provides detailed explanations for question generation
+- Explains theme detection and reasoning
+- Helps understand AI decision-making
 
 ## Supported Languages
 - English
@@ -201,6 +309,12 @@ Generates a single follow-up question in the specified language with informative
 - French (Français)
 - German (Deutsch)
 - Korean (한국어)
+
+## Testing
+Run comprehensive tests for the theme-enhanced API:
+```bash
+python test_theme_api_comprehensive.py
+```
 
 ## License
 MIT (or specify as appropriate) 
