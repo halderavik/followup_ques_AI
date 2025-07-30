@@ -123,4 +123,72 @@ class EnhancedMultilingualResponse(BaseModel):
     original_question: str = Field(..., description="The original survey question.")
     original_response: str = Field(..., description="The original user response.")
     type: str = Field(..., description="The type of follow-up question requested.")
-    language: str = Field(..., description="The language of the generated question.") 
+    language: str = Field(..., description="The language of the generated question.")
+
+class ThemeParameter(BaseModel):
+    """
+    Model for a theme with its importance percentage.
+
+    Args:
+        name (str): The name of the theme.
+        importance (int): The importance percentage (0-100).
+    """
+    name: str = Field(..., description="The name of the theme.")
+    importance: int = Field(..., ge=0, le=100, description="The importance percentage (0-100).")
+
+class ThemeParameters(BaseModel):
+    """
+    Model for theme parameters containing a list of themes.
+
+    Args:
+        themes (List[ThemeParameter]): List of themes with their importance percentages.
+    """
+    themes: List[ThemeParameter] = Field(..., description="List of themes with their importance percentages.")
+
+class ThemeEnhancedRequest(BaseModel):
+    """
+    Request model for theme-enhanced multilingual follow-up question generation.
+
+    Args:
+        question (str): The original survey question (in the target language).
+        response (str): The user's answer to the survey question (in the target language).
+        type (str): The type of follow-up question (reason, impact, elaboration, etc.).
+        language (str): The target language for the response.
+        theme (str): "Yes" to enable theme analysis, "No" for standard workflow.
+        theme_parameters (Optional[ThemeParameters]): Theme parameters (required when theme="Yes").
+    """
+    question: str = Field(..., description="The original survey question (in the target language).")
+    response: str = Field(..., description="The user's answer to the survey question (in the target language).")
+    type: str = Field(..., description="The type of follow-up question.")
+    language: str = Field(..., description="The target language for the response.")
+    theme: str = Field(..., description="'Yes' to enable theme analysis, 'No' for standard workflow.")
+    theme_parameters: Optional[ThemeParameters] = Field(None, description="Theme parameters (required when theme='Yes').")
+
+class ThemeEnhancedResponse(BaseModel):
+    """
+    Response model for theme-enhanced multilingual follow-up question.
+
+    Args:
+        informative (int): 1 if response is informative, 0 if non-informative.
+        question (Optional[str]): The generated follow-up question (only if informative=1).
+        explanation (Optional[str]): Explanation of how the question was generated (only if informative=1).
+        original_question (str): The original survey question.
+        original_response (str): The original user response.
+        type (str): The type of follow-up question requested.
+        language (str): The language of the generated question.
+        theme (str): The theme setting used ("Yes" or "No").
+        detected_theme (Optional[str]): The theme detected in the response (if any).
+        theme_importance (Optional[int]): The importance percentage of detected theme.
+        highest_importance_theme (Optional[str]): The highest importance theme (when no themes found).
+    """
+    informative: int = Field(..., description="1 if response is informative, 0 if non-informative.")
+    question: Optional[str] = Field(None, description="The generated follow-up question (only if informative=1).")
+    explanation: Optional[str] = Field(None, description="Explanation of how the question was generated (only if informative=1).")
+    original_question: str = Field(..., description="The original survey question.")
+    original_response: str = Field(..., description="The original user response.")
+    type: str = Field(..., description="The type of follow-up question requested.")
+    language: str = Field(..., description="The language of the generated question.")
+    theme: str = Field(..., description="The theme setting used ('Yes' or 'No').")
+    detected_theme: Optional[str] = Field(None, description="The theme detected in the response (if any).")
+    theme_importance: Optional[int] = Field(None, description="The importance percentage of detected theme.")
+    highest_importance_theme: Optional[str] = Field(None, description="The highest importance theme (when no themes found).") 

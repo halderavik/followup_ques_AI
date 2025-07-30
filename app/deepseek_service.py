@@ -670,4 +670,447 @@ class DeepSeekService:
         except DeepSeekAPIError as e:
             # If question generation fails, still return informative=1 but with error
             self.logger.error(f"Failed to generate question for informative response: {e}")
-            raise e 
+            raise e
+
+    def detect_themes_in_response(self, response: str, themes: list) -> Optional[dict]:
+        """
+        Detect which themes from the provided list are present in the response.
+
+        Args:
+            response (str): The user's response to analyze.
+            themes (list): List of theme dictionaries with 'name' and 'importance' keys.
+
+        Returns:
+            Optional[dict]: Dictionary with detected theme info or None if no themes found.
+        """
+        cache_key = self._get_cache_key(f"theme_detection:{response}:{str(themes)}")
+        cached_result = self._get_cached_response(cache_key)
+        if cached_result:
+            return cached_result
+
+        try:
+            prompt = self._build_theme_detection_prompt(response, themes)
+            
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "Analyze the response for theme matches. Return ONLY a JSON object with 'theme_name' and 'importance' or 'none' if no themes found."
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.1,
+                "max_tokens": 50,
+                "top_p": 0.9,
+                "frequency_penalty": 0.0,
+                "presence_penalty": 0.0,
+                "stream": False
+            }
+
+            response_data = self.session.post(
+                self.API_URL,
+                headers=self._get_headers(),
+                json=payload,
+                timeout=self.TIMEOUT
+            )
+            response_data.raise_for_status()
+            
+            result = response_data.json()
+            content = result["choices"][0]["message"]["content"].strip()
+            
+            # Parse the JSON response
+            import json
+            import re
+            
+            # Clean the content - remove any extra text before or after JSON
+            content_clean = content.strip()
+            
+            # Try to extract JSON from the response
+            json_match = re.search(r'\{.*\}', content_clean)
+            if json_match:
+                content_clean = json_match.group(0)
+            
+            try:
+                theme_result = json.loads(content_clean)
+                if theme_result.get("theme_name") == "none":
+                    result_data = None
+                else:
+                    result_data = {
+                        "theme_name": theme_result.get("theme_name"),
+                        "importance": theme_result.get("importance")
+                    }
+            except json.JSONDecodeError:
+                self.logger.warning(f"Failed to parse theme detection response as JSON: {content}")
+                # Fallback: try simple string matching
+                result_data = None
+                for theme in themes:
+                    if theme["name"].lower() in response.lower():
+                        result_data = {
+                            "theme_name": theme["name"],
+                            "importance": theme["importance"]
+                        }
+                        break
+            
+            self._cache_response(cache_key, result_data)
+            return result_data
+            
+        except Exception as e:
+            self.logger.error(f"Theme detection failed: {e}")
+            return None
+
+    @staticmethod
+    def _build_theme_detection_prompt(response: str, themes: list) -> str:
+        """
+        Build prompt for theme detection.
+
+        Args:
+            response (str): The user's response to analyze.
+            themes (list): List of theme dictionaries.
+
+        Returns:
+            str: The formatted prompt for theme detection.
+        """
+        themes_str = ", ".join([f"'{t['name']}' (importance: {t['importance']}%)" for t in themes])
+        
+        return f"""Analyze this response for theme matches:
+
+Response: "{response}"
+
+Available themes: {themes_str}
+
+Look for exact matches or synonyms of the theme names in the response.
+
+Return ONLY a JSON object like this:
+{{"theme_name": "theme_name", "importance": importance_number}}
+
+If no themes are found, return:
+{{"theme_name": "none", "importance": 0}}
+
+Examples:
+- If response contains "communication" and themes include "communication", return {{"theme_name": "communication", "importance": 60}}
+- If response contains "leadership" and themes include "leadership", return {{"theme_name": "leadership", "importance": 80}}
+- If no themes match, return {{"theme_name": "none", "importance": 0}}
+
+Choose the theme with the highest importance if multiple themes are found."""
+
+    def generate_theme_enhanced_question(self, question: str, response: str, question_type: str, language: str, 
+                                       theme: str, theme_parameters: Optional[dict] = None) -> dict:
+        """
+        Generate a theme-enhanced multilingual follow-up question.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's response to the question.
+            question_type (str): The type of follow-up question to generate.
+            language (str): The target language for the response.
+            theme (str): "Yes" to enable theme analysis, "No" for standard workflow.
+            theme_parameters (Optional[dict]): Theme parameters when theme="Yes".
+
+        Returns:
+            dict: Dictionary containing response data with theme information.
+
+        Raises:
+            DeepSeekAPIError: If there's an error calling the DeepSeek API.
+        """
+        # First check informativeness
+        is_informative = self.detect_informativeness(question, response, language)
+        if not is_informative:
+            return {
+                "informative": 0, 
+                "question": None,
+                "theme": theme,
+                "detected_theme": None,
+                "theme_importance": None,
+                "highest_importance_theme": None
+            }
+
+        # If theme is "No", use standard workflow
+        if theme.lower() == "no":
+            try:
+                question_text = self.generate_multilingual_question(question, response, question_type, language)
+                return {
+                    "informative": 1,
+                    "question": question_text,
+                    "theme": theme,
+                    "detected_theme": None,
+                    "theme_importance": None,
+                    "highest_importance_theme": None
+                }
+            except DeepSeekAPIError as e:
+                self.logger.error(f"Failed to generate standard question: {e}")
+                raise e
+
+        # Theme analysis workflow
+        if not theme_parameters or not theme_parameters.get("themes"):
+            raise ValueError("Theme parameters required when theme='Yes'")
+
+        themes = [{"name": t["name"], "importance": t["importance"]} for t in theme_parameters["themes"]]
+        
+        # Detect themes in response
+        detected_theme = self.detect_themes_in_response(response, themes)
+        
+        if detected_theme:
+            # Theme found - generate question based on detected theme and type
+            try:
+                result = self._generate_theme_based_question(
+                    question, response, question_type, language, 
+                    detected_theme["theme_name"], detected_theme["importance"]
+                )
+                return {
+                    "informative": 1,
+                    "question": result["question"],
+                    "explanation": result["explanation"],
+                    "theme": theme,
+                    "detected_theme": detected_theme["theme_name"],
+                    "theme_importance": detected_theme["importance"],
+                    "highest_importance_theme": None
+                }
+            except DeepSeekAPIError as e:
+                self.logger.error(f"Failed to generate theme-based question: {e}")
+                raise e
+        else:
+            # No themes found - ask about why important themes weren't mentioned
+            try:
+                # Find highest importance theme
+                highest_theme = max(themes, key=lambda x: x["importance"])
+                result = self._generate_missing_theme_question(
+                    question, response, language, highest_theme["name"], highest_theme["importance"]
+                )
+                return {
+                    "informative": 1,
+                    "question": result["question"],
+                    "explanation": result["explanation"],
+                    "theme": theme,
+                    "detected_theme": None,
+                    "theme_importance": None,
+                    "highest_importance_theme": highest_theme["name"]
+                }
+            except DeepSeekAPIError as e:
+                self.logger.error(f"Failed to generate missing theme question: {e}")
+                raise e
+
+    def _generate_theme_based_question(self, question: str, response: str, question_type: str, 
+                                     language: str, theme_name: str, theme_importance: int) -> dict:
+        """
+        Generate a question based on detected theme and question type.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's response.
+            question_type (str): The type of follow-up question.
+            language (str): The target language.
+            theme_name (str): The detected theme name.
+            theme_importance (int): The importance percentage of the theme.
+
+        Returns:
+            dict: Dictionary containing question and explanation.
+        """
+        cache_key = self._get_cache_key(f"theme_question:{question}:{response}:{question_type}:{language}:{theme_name}")
+        cached_result = self._get_cached_response(cache_key)
+        if cached_result:
+            return cached_result
+
+        prompt = self._build_theme_question_prompt(question, response, question_type, language, theme_name, theme_importance)
+        
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"Generate a follow-up question in {language} that focuses on the detected theme '{theme_name}' and follows the specified question type. Return the question and explanation separately."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 200,
+            "top_p": 0.9,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False
+        }
+
+        response_data = self.session.post(
+            self.API_URL,
+            headers=self._get_headers(),
+            json=payload,
+            timeout=self.TIMEOUT
+        )
+        response_data.raise_for_status()
+        
+        result = response_data.json()
+        content = result["choices"][0]["message"]["content"].strip()
+        
+        # Parse question and explanation
+        question_text, explanation = self._parse_question_and_explanation(content)
+        
+        # Clean the question text
+        question_text = self._clean_question_text(question_text)
+        
+        result_data = {"question": question_text, "explanation": explanation}
+        self._cache_response(cache_key, result_data)
+        return result_data
+
+    def _generate_missing_theme_question(self, question: str, response: str, language: str, 
+                                       theme_name: str, theme_importance: int) -> dict:
+        """
+        Generate a question asking why important themes weren't mentioned.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's response.
+            language (str): The target language.
+            theme_name (str): The highest importance theme.
+            theme_importance (int): The importance percentage.
+
+        Returns:
+            dict: Dictionary containing question and explanation.
+        """
+        cache_key = self._get_cache_key(f"missing_theme:{question}:{response}:{language}:{theme_name}")
+        cached_result = self._get_cached_response(cache_key)
+        if cached_result:
+            return cached_result
+
+        prompt = f"""Original Question: {question}
+User Response: {response}
+
+The user didn't mention '{theme_name}' (importance: {theme_importance}%) in their response.
+
+Generate a follow-up question in {language} asking why they didn't mention this important theme or what they think about it.
+
+Return in this format:
+Question: [Your question here]
+
+Explanation: [Explain how this question addresses the missing theme]"""
+
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": f"Generate a follow-up question in {language} about missing important themes."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.7,
+            "max_tokens": 200,
+            "top_p": 0.9,
+            "frequency_penalty": 0.0,
+            "presence_penalty": 0.0,
+            "stream": False
+        }
+
+        response_data = self.session.post(
+            self.API_URL,
+            headers=self._get_headers(),
+            json=payload,
+            timeout=self.TIMEOUT
+        )
+        response_data.raise_for_status()
+        
+        result = response_data.json()
+        content = result["choices"][0]["message"]["content"].strip()
+        
+        # Parse question and explanation
+        question_text, explanation = self._parse_question_and_explanation(content)
+        
+        # Clean the question text
+        question_text = self._clean_question_text(question_text)
+        
+        result_data = {"question": question_text, "explanation": explanation}
+        self._cache_response(cache_key, result_data)
+        return result_data
+
+    @staticmethod
+    def _build_theme_question_prompt(question: str, response: str, question_type: str, 
+                                   language: str, theme_name: str, theme_importance: int) -> str:
+        """
+        Build prompt for theme-based question generation.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's response.
+            question_type (str): The type of follow-up question.
+            language (str): The target language.
+            theme_name (str): The detected theme name.
+            theme_importance (int): The importance percentage.
+
+        Returns:
+            str: The formatted prompt for theme-based question generation.
+        """
+        type_descriptions = {
+            "reason": "ask for the reason or cause",
+            "impact": "ask about the impact or consequences",
+            "elaboration": "ask for more details or examples",
+            "clarification": "ask for clarification",
+            "comparison": "ask for comparison"
+        }
+        
+        type_desc = type_descriptions.get(question_type.lower(), "ask a relevant follow-up")
+        
+        return f"""Original Question: {question}
+User Response: {response}
+
+Detected Theme: {theme_name} (importance: {theme_importance}%)
+
+Generate a follow-up question in {language} that:
+1. Focuses specifically on the theme '{theme_name}'
+2. Uses the question type '{question_type}' ({type_desc})
+3. Is relevant to the user's response
+
+Return in this format:
+Question: [Your question here]
+
+Explanation: [Explain how this question focuses on the theme and question type]"""
+
+    def _parse_question_and_explanation(self, content: str) -> tuple:
+        """
+        Parse question and explanation from AI response.
+
+        Args:
+            content (str): The AI response content.
+
+        Returns:
+            tuple: (question_text, explanation)
+        """
+        lines = content.split('\n')
+        question_text = ""
+        explanation = ""
+        in_question = False
+        in_explanation = False
+        
+        for line in lines:
+            line = line.strip()
+            if line.lower().startswith('question:'):
+                in_question = True
+                in_explanation = False
+                question_text = line[9:].strip()  # Remove "Question: "
+            elif line.lower().startswith('explanation:'):
+                in_question = False
+                in_explanation = True
+                explanation = line[12:].strip()  # Remove "Explanation: "
+            elif in_question and line:
+                question_text += " " + line
+            elif in_explanation and line:
+                explanation += " " + line
+        
+        # Clean up
+        question_text = question_text.strip()
+        explanation = explanation.strip()
+        
+        # Fallback if parsing fails
+        if not question_text:
+            question_text = content.strip()
+        if not explanation:
+            explanation = "Generated follow-up question based on theme and question type."
+        
+        return question_text, explanation 
