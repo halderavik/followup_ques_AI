@@ -561,7 +561,7 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Analyze if the response is informative. Return ONLY '1' for informative or '0' for non-informative."
+                    "content": f"Be flexible in determining informativeness. Consider responses informative if they provide ANY meaningful information, even if brief. Short answers, single words, or concise responses can be informative. Only mark as non-informative if the response is completely empty, unclear, or shows no engagement. Return ONLY '1' for informative or '0' for non-informative."
                 },
                 {
                     "role": "user",
@@ -623,22 +623,22 @@ class DeepSeekService:
         Returns:
             str: The formatted informativeness detection prompt.
         """
-        # Define non-informative patterns in multiple languages
+        # Define non-informative patterns in multiple languages (more restrictive)
         non_informative_patterns = {
-            "English": ["i don't know", "i don't know", "no", "yes", "maybe", "not sure", "unsure", "idk", "dunno", "n/a", "none", "nothing"],
-            "Chinese": ["我不知道", "不知道", "不", "是", "也许", "不确定", "不清楚", "没有", "无", "不晓得"],
-            "Japanese": ["わかりません", "知りません", "いいえ", "はい", "たぶん", "わからない", "不明", "なし", "無し"],
-            "Spanish": ["no sé", "no lo sé", "no", "sí", "tal vez", "no estoy seguro", "no estoy segura", "ninguno", "nada"],
-            "French": ["je ne sais pas", "je ne sais pas", "non", "oui", "peut-être", "pas sûr", "pas sûre", "aucun", "rien"],
-            "German": ["ich weiß nicht", "weiß nicht", "nein", "ja", "vielleicht", "nicht sicher", "keiner", "nichts"],
-            "Korean": ["모르겠어요", "모름", "아니요", "네", "아마", "불확실", "없음", "아무것도"]
+            "English": ["i don't know", "idk", "dunno", "n/a", "none", "nothing", "no idea", "not applicable", "skip", "pass"],
+            "Chinese": ["我不知道", "不知道", "不晓得", "无", "没有", "跳过", "不适用"],
+            "Japanese": ["わかりません", "知りません", "不明", "なし", "無し", "スキップ", "該当なし"],
+            "Spanish": ["no sé", "no lo sé", "ninguno", "nada", "no aplica", "saltar"],
+            "French": ["je ne sais pas", "aucun", "rien", "ne s'applique pas", "passer"],
+            "German": ["ich weiß nicht", "weiß nicht", "keiner", "nichts", "nicht zutreffend", "überspringen"],
+            "Korean": ["모르겠어요", "모름", "없음", "해당없음", "건너뛰기"]
         }
         
         # Get patterns for the specific language, default to English
         patterns = non_informative_patterns.get(language, non_informative_patterns["English"])
         patterns_str = ", ".join(patterns)
         
-        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Non-informative responses include: {patterns_str}. Return '1' for informative or '0' for non-informative."
+        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Be flexible - even short answers, single words, or brief responses can be informative if they provide any meaningful information. Only consider non-informative if completely empty, unclear, or shows no engagement. Non-informative patterns include: {patterns_str}. Return '1' for informative or '0' for non-informative."
 
     def generate_enhanced_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> dict:
         """
