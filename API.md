@@ -254,6 +254,10 @@ When a response is classified as non-informative (`informative: 0`), no follow-u
 }
 ```
 
+**Theme Parameters:**
+- **1-10 themes allowed**: You can specify between 1 and 10 themes
+- **Importance range**: 0-100% for each theme
+
 **Response (Theme Found):**
 ```json
 {
@@ -506,6 +510,26 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-them
   }'
 ```
 
+#### cURL Example with Equal Weights (Random Selection)
+```bash
+curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "How do you handle conflicts in your team?",
+    "response": "I try to listen to all perspectives and find common ground.",
+    "type": "impact",
+    "language": "English",
+    "theme": "Yes",
+    "theme_parameters": {
+      "themes": [
+        {"name": "communication", "importance": 80},
+        {"name": "leadership", "importance": 80},
+        {"name": "conflict_resolution", "importance": 80}
+      ]
+    }
+  }'
+```
+
 #### Python Example
 ```python
 import requests
@@ -618,6 +642,33 @@ try:
     if result['informative'] == 1:
         print(f"Detected theme: {result.get('detected_theme')}")
         print(f"Theme importance: {result.get('theme_importance')}%")
+        print(f"Generated question: {result['question']}")
+        print(f"Explanation: {result.get('explanation')}")
+    else:
+        print("Response was not informative enough")
+        
+except Exception as e:
+    print(f"Error: {e}")
+
+# Usage example with equal weights (random selection)
+try:
+    equal_theme_params = {
+        "themes": [
+            {"name": "communication", "importance": 80},
+            {"name": "leadership", "importance": 80},
+            {"name": "conflict_resolution", "importance": 80}
+        ]
+    }
+    
+    result = generate_theme_enhanced_question(
+        question="How do you handle conflicts in your team?",
+        response="I try to listen to all perspectives and find common ground.",
+        theme_parameters=equal_theme_params
+    )
+    
+    if result['informative'] == 1:
+        print(f"Detected theme: {result.get('detected_theme')}")
+        print(f"Highest importance theme: {result.get('highest_importance_theme')}")
         print(f"Generated question: {result['question']}")
         print(f"Explanation: {result.get('explanation')}")
     else:
@@ -750,6 +801,34 @@ generateThemeEnhancedQuestion(
     if (result.informative === 1) {
         console.log(`Detected theme: ${result.detected_theme}`);
         console.log(`Theme importance: ${result.theme_importance}%`);
+        console.log(`Generated question: ${result.question}`);
+        console.log(`Explanation: ${result.explanation}`);
+    } else {
+        console.log("Response was not informative enough");
+    }
+})
+.catch(error => {
+    console.error('Error:', error);
+});
+
+// Usage example with equal weights (random selection)
+const equalThemeParams = {
+    themes: [
+        {name: "communication", importance: 80},
+        {name: "leadership", importance: 80},
+        {name: "conflict_resolution", importance: 80}
+    ]
+};
+
+generateThemeEnhancedQuestion(
+    "How do you handle conflicts in your team?",
+    "I try to listen to all perspectives and find common ground.",
+    equalThemeParams
+)
+.then(result => {
+    if (result.informative === 1) {
+        console.log(`Detected theme: ${result.detected_theme}`);
+        console.log(`Highest importance theme: ${result.highest_importance_theme}`);
         console.log(`Generated question: ${result.question}`);
         console.log(`Explanation: ${result.explanation}`);
     } else {

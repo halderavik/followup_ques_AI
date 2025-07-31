@@ -8,6 +8,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 import hashlib
 import time
+import concurrent.futures
 
 class DeepSeekAPIError(Exception):
     """
@@ -20,9 +21,9 @@ class DeepSeekService:
     Service class for interacting with the DeepSeek LLM API.
     """
     API_URL = "https://api.deepseek.com/v1/chat/completions"
-    TIMEOUT = 25  # Increased for reliability - prioritize working over speed
-    RETRIES = 1   # Add back retries for reliability
-    MAX_TOKENS = 80  # Keep optimized tokens
+    TIMEOUT = 12  # Further reduced for faster response
+    RETRIES = 1   # Keep retries for reliability
+    MAX_TOKENS = 50  # Further reduced for faster generation
 
     def __init__(self):
         """
@@ -37,19 +38,19 @@ class DeepSeekService:
         # Create a session with connection pooling for better performance
         self.session = requests.Session()
         
-        # Configure retry strategy for reliability
+        # Configure retry strategy for reliability with faster backoff
         retry_strategy = Retry(
             total=self.RETRIES,
             status_forcelist=[429, 500, 502, 503, 504],
             allowed_methods=["POST"],
-            backoff_factor=0.3  # Balanced backoff for reliability
+            backoff_factor=0.1  # Faster backoff for speed
         )
         
-        # Configure adapter with ultra-optimized connection pooling
+        # Configure adapter with optimized connection pooling
         adapter = HTTPAdapter(
             max_retries=retry_strategy,
-            pool_connections=50,  # Increased from 20
-            pool_maxsize=100,     # Increased from 50
+            pool_connections=20,  # Optimized for typical load
+            pool_maxsize=50,      # Optimized for typical load
             pool_block=False      # Don't block on connection pool exhaustion
         )
         
@@ -62,9 +63,10 @@ class DeepSeekService:
         except:
             pass  # Ignore pre-warm failures
         
-        # Simple in-memory cache for performance
+        # Optimized in-memory cache for performance
         self.cache = {}
-        self.cache_ttl = 900  # Reduced from 1800 to 15 minutes for faster cache invalidation
+        self.cache_ttl = 300  # 5 minutes for faster cache invalidation
+        self.cache_max_size = 500  # Smaller cache for faster lookups
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -88,7 +90,11 @@ class DeepSeekService:
         return None
     
     def _cache_response(self, cache_key: str, response: Dict[str, Any]):
-        """Cache the response with timestamp."""
+        """Cache the response with timestamp and size management."""
+        # Clean up cache if it's getting too large
+        if len(self.cache) >= self.cache_max_size:
+            self.cleanup_cache()
+        
         self.cache[cache_key] = (response, time.time())
     
     def generate_questions(self, prompt: str) -> Dict[str, Any]:
@@ -124,9 +130,9 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.3,  # Balanced for reliability and speed
+            "temperature": 0.1,  # Very low temperature for fastest, most focused responses
             "max_tokens": self.MAX_TOKENS,
-            "top_p": 0.9,        # Back to standard for reliability
+            "top_p": 0.7,        # Lower for faster generation
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False      # Keep no streaming for faster response
@@ -452,9 +458,9 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.2,  # Balanced for reliability and speed
-            "max_tokens": 80,     # Keep optimized but reliable
-            "top_p": 0.9,        # Back to standard for reliability
+            "temperature": 0.05,  # Very low temperature for fastest responses
+            "max_tokens": 50,     # Further reduced for faster generation
+            "top_p": 0.7,        # Lower for faster generation
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False      # Keep no streaming for faster response
@@ -562,9 +568,9 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.1,  # Very low temperature for consistent classification
-            "max_tokens": 10,    # Very short response needed
-            "top_p": 0.9,
+            "temperature": 0.0,  # Zero temperature for fastest, most consistent classification
+            "max_tokens": 5,     # Minimal tokens needed for 1/0 response
+            "top_p": 0.8,
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False
@@ -703,9 +709,9 @@ class DeepSeekService:
                         "content": prompt
                     }
                 ],
-                "temperature": 0.1,
-                "max_tokens": 50,
-                "top_p": 0.9,
+                "temperature": 0.0,  # Zero temperature for fastest, most consistent theme detection
+                "max_tokens": 30,    # Reduced for faster JSON response
+                "top_p": 0.8,
                 "frequency_penalty": 0.0,
                 "presence_penalty": 0.0,
                 "stream": False
@@ -800,7 +806,7 @@ Choose the theme with the highest importance if multiple themes are found."""
     def generate_theme_enhanced_question(self, question: str, response: str, question_type: str, language: str, 
                                        theme: str, theme_parameters: Optional[dict] = None) -> dict:
         """
-        Generate a theme-enhanced multilingual follow-up question.
+        Generate a theme-enhanced multilingual follow-up question with optimized performance.
 
         Args:
             question (str): The original survey question.
@@ -816,19 +822,7 @@ Choose the theme with the highest importance if multiple themes are found."""
         Raises:
             DeepSeekAPIError: If there's an error calling the DeepSeek API.
         """
-        # First check informativeness
-        is_informative = self.detect_informativeness(question, response, language)
-        if not is_informative:
-            return {
-                "informative": 0, 
-                "question": None,
-                "theme": theme,
-                "detected_theme": None,
-                "theme_importance": None,
-                "highest_importance_theme": None
-            }
-
-        # If theme is "No", use standard workflow
+        # If theme is "No", use standard workflow (fast path)
         if theme.lower() == "no":
             try:
                 question_text = self.generate_multilingual_question(question, response, question_type, language)
@@ -850,8 +844,32 @@ Choose the theme with the highest importance if multiple themes are found."""
 
         themes = [{"name": t["name"], "importance": t["importance"]} for t in theme_parameters["themes"]]
         
-        # Detect themes in response
-        detected_theme = self.detect_themes_in_response(response, themes)
+        # OPTIMIZATION: Run informativeness detection and theme detection in parallel
+        start_time = time.time()
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            # Submit both tasks simultaneously
+            informativeness_future = executor.submit(self.detect_informativeness, question, response, language)
+            theme_detection_future = executor.submit(self.detect_themes_in_response, response, themes)
+            
+            # Wait for both results
+            is_informative = informativeness_future.result()
+            detected_theme = theme_detection_future.result()
+        
+        # Log performance improvement
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"Parallel processing completed in {elapsed_time:.2f}s")
+        
+        # OPTIMIZATION: Early return for non-informative responses
+        if not is_informative:
+            return {
+                "informative": 0, 
+                "question": None,
+                "theme": theme,
+                "detected_theme": None,
+                "theme_importance": None,
+                "highest_importance_theme": None
+            }
         
         if detected_theme:
             # Theme found - generate question based on detected theme and type
@@ -877,6 +895,7 @@ Choose the theme with the highest importance if multiple themes are found."""
             try:
                 # Find highest importance theme
                 highest_theme = max(themes, key=lambda x: x["importance"])
+                
                 result = self._generate_missing_theme_question(
                     question, response, language, highest_theme["name"], highest_theme["importance"]
                 )

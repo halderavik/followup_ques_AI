@@ -141,9 +141,9 @@ class ThemeParameters(BaseModel):
     Model for theme parameters containing a list of themes.
 
     Args:
-        themes (List[ThemeParameter]): List of themes with their importance percentages.
+        themes (List[ThemeParameter]): List of themes with their importance percentages (1-10 themes allowed).
     """
-    themes: List[ThemeParameter] = Field(..., description="List of themes with their importance percentages.")
+    themes: List[ThemeParameter] = Field(..., min_items=1, max_items=10, description="List of themes with their importance percentages (1-10 themes allowed).")
 
 class ThemeEnhancedRequest(BaseModel):
     """
