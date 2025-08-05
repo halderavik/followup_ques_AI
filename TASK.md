@@ -120,6 +120,16 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **4.1.7** Deploy fix to Heroku
 - [x] **4.1.8** Update all documentation to reflect changes
 
+### 4.4 All 6 Question Types Support (Current)
+- [x] **4.4.1** Modify generate-followup API to support all 6 question types
+- [x] **4.4.2** Update build_prompt method to handle dynamic question types
+- [x] **4.4.3** Rename _ensure_three_questions to _ensure_questions with configurable count
+- [x] **4.4.4** Update parse_response to accept allowed_types parameter
+- [x] **4.4.5** Update routes.py to pass allowed_types to parse_response
+- [x] **4.4.6** Update API documentation to reflect new functionality
+- [x] **4.4.7** Test locally with all 6 question types
+- [x] **4.4.8** Test with specific allowed_types combinations
+
 ### 4.2 Bug Fixes & Improvements (Days 18-19)
 - [x] **4.2.1** Fix issues identified in beta testing
 - [x] **4.2.2** Improve question generation based on feedback

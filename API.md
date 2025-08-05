@@ -86,17 +86,18 @@ Returns all supported question types for follow-up generation.
 ### 4. Generate Follow-up Questions
 **POST** `/generate-followup`
 
-Generates exactly 3 intelligent follow-up questions with specific types: Reason, Example, and Impact.
+Generates intelligent follow-up questions for survey responses. By default, generates all 6 question types, but you can specify which types to include using the `allowed_types` parameter.
 
 **Request Body:**
 ```json
 {
   "question": "What challenges do you face at work?",
-  "response": "I struggle with time management and communication with my team."
+  "response": "I struggle with time management and communication with my team.",
+  "allowed_types": ["reason", "example", "impact"]
 }
 ```
 
-**Response:**
+**Response (with allowed_types specified):**
 ```json
 {
   "followups": [
@@ -116,7 +117,43 @@ Generates exactly 3 intelligent follow-up questions with specific types: Reason,
 }
 ```
 
-**Note:** This endpoint always returns exactly 3 questions with the types: reason, example, and impact. The `allowed_types` parameter is no longer used as the types are fixed.
+**Response (without allowed_types - generates all 6 types):**
+```json
+{
+  "followups": [
+    {
+      "text": "Why do you think time management and communication are challenging for you?",
+      "type": "reason"
+    },
+    {
+      "text": "Could you clarify what specific aspects of communication with your team are difficult?",
+      "type": "clarification"
+    },
+    {
+      "text": "Can you elaborate on how time management issues manifest in your daily work?",
+      "type": "elaboration"
+    },
+    {
+      "text": "Can you give an example of a recent situation where communication with your team was challenging?",
+      "type": "example"
+    },
+    {
+      "text": "What impact has poor time management had on your work or team?",
+      "type": "impact"
+    },
+    {
+      "text": "How does your current communication with the team compare to previous experiences in other roles?",
+      "type": "comparison"
+    }
+  ]
+}
+```
+
+**Note:** 
+- If `allowed_types` is provided, generates exactly that many questions with the specified types
+- If `allowed_types` is not provided, generates all 6 question types: reason, clarification, elaboration, example, impact, and comparison
+- The `allowed_types` parameter accepts any combination of the 6 supported question types
+- Questions are generated in the order specified in `allowed_types`
 
 ### 5. Generate Single Reason Question
 **POST** `/generate-reason`
@@ -857,29 +894,45 @@ generateThemeEnhancedQuestion(
 ```json
 {
   "question": "What do you think about our product?",
-  "answer": "The interface is confusing and it's too slow.",
-  "question_types": ["CLARIFICATION", "EXAMPLE", "IMPACT"]
+  "response": "The interface is confusing and it's too slow.",
+  "allowed_types": ["clarification", "example", "impact"]
 }
 ```
 
 **Generated Follow-ups:**
-1. "What specific aspects of the interface do you find confusing?"
-2. "Can you provide an example of when the slowness was most noticeable?"
-3. "How does the confusing interface and slowness impact your overall user experience?"
+1. "Could you clarify what specific aspects of the interface you find confusing?"
+2. "Can you give specific examples of parts of the interface that you find confusing?"
+3. "How does the slowness of the product impact your daily workflow or productivity?"
 
 ### Employee Satisfaction Survey
 ```json
 {
   "question": "How satisfied are you with your work environment?",
-  "answer": "I like my colleagues but the office space is too crowded.",
-  "question_types": ["REASON", "EXAMPLE", "COMPARISON"]
+  "response": "I like my colleagues but the office space is too crowded.",
+  "allowed_types": ["reason", "example", "comparison"]
 }
 ```
 
 **Generated Follow-ups:**
-1. "What makes you enjoy working with your colleagues?"
-2. "Can you describe a specific situation where the crowded office space was problematic?"
+1. "Why do you enjoy working with your colleagues?"
+2. "Can you give an example of a situation where the crowded office space was problematic?"
 3. "How does this work environment compare to your previous workplaces?"
+
+### All 6 Question Types Example
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication with my team."
+}
+```
+
+**Generated Follow-ups (all 6 types):**
+1. "Why do you think time management is a challenge for you?" (reason)
+2. "Could you clarify what specific aspects of communication with your team are difficult?" (clarification)
+3. "Can you elaborate on how time management issues manifest in your daily work?" (elaboration)
+4. "Can you give an example of a recent situation where communication with your team was challenging?" (example)
+5. "What impact has poor time management had on your work or team?" (impact)
+6. "How does your current communication with the team compare to previous experiences in other roles?" (comparison)
 
 ### Single Reason Question Example
 ```json

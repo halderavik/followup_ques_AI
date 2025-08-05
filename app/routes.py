@@ -94,10 +94,11 @@ def generate_followup():
         ).dict()), 400
 
     service = DeepSeekService()
-    prompt = service.build_prompt(req.question, req.response, [t.value for t in req.allowed_types] if req.allowed_types else None)
+    allowed_types_list = [t.value for t in req.allowed_types] if req.allowed_types else None
+    prompt = service.build_prompt(req.question, req.response, allowed_types_list)
     try:
         api_response = service.generate_questions(prompt)
-        followups = service.parse_response(api_response)
+        followups = service.parse_response(api_response, allowed_types_list)
         response = GenerateFollowupResponse(
             followups=[FollowupQuestion(type=QuestionType(f["type"]), text=f["text"]) for f in followups]
         )

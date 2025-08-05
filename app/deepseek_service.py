@@ -21,9 +21,9 @@ class DeepSeekService:
     Service class for interacting with the DeepSeek LLM API.
     """
     API_URL = "https://api.deepseek.com/v1/chat/completions"
-    TIMEOUT = 12  # Further reduced for faster response
+    TIMEOUT = 15  # Reduced timeout for faster response
     RETRIES = 1   # Keep retries for reliability
-    MAX_TOKENS = 50  # Further reduced for faster generation
+    MAX_TOKENS = 150  # Optimized for faster generation
 
     def __init__(self):
         """
@@ -65,8 +65,8 @@ class DeepSeekService:
         
         # Optimized in-memory cache for performance
         self.cache = {}
-        self.cache_ttl = 300  # 5 minutes for faster cache invalidation
-        self.cache_max_size = 500  # Smaller cache for faster lookups
+        self.cache_ttl = 600  # 10 minutes for better caching
+        self.cache_max_size = 1000  # Larger cache for better hit rates
 
     def _get_headers(self) -> Dict[str, str]:
         return {
@@ -123,16 +123,16 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": "Generate 2-3 follow-up questions. Return ONLY valid JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
+                    "content": "Generate follow-up questions based on the user's request. Return ONLY valid JSON: {\"followups\": [{\"type\": \"reason|clarification|elaboration|example|impact|comparison\", \"text\": \"question\"}]}"
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.1,  # Very low temperature for fastest, most focused responses
+            "temperature": 0.05,  # Even lower temperature for fastest responses
             "max_tokens": self.MAX_TOKENS,
-            "top_p": 0.7,        # Lower for faster generation
+            "top_p": 0.5,        # Lower for faster generation
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False      # Keep no streaming for faster response
@@ -209,12 +209,13 @@ class DeepSeekService:
         
         return text.strip()
 
-    def parse_response(self, api_response: dict) -> list:
+    def parse_response(self, api_response: dict, allowed_types: Optional[list] = None) -> list:
         """
         Parse the DeepSeek API response to extract follow-up questions.
 
         Args:
             api_response (dict): The raw API response from DeepSeek.
+            allowed_types (Optional[list]): List of allowed question types to determine expected count.
 
         Returns:
             list: List of question dictionaries with 'type' and 'text' fields.
@@ -232,6 +233,12 @@ class DeepSeekService:
             if not content:
                 raise DeepSeekAPIError("No content in DeepSeek API response.")
             
+            # Determine expected count based on allowed_types
+            if allowed_types:
+                expected_count = len(allowed_types)
+            else:
+                expected_count = 6  # Default to all 6 types
+            
             # Try to parse JSON from the content
             import json
             try:
@@ -247,8 +254,8 @@ class DeepSeekService:
                             if isinstance(question, dict) and "text" in question:
                                 question["text"] = self._clean_question_text(question["text"])
                         
-                        # Ensure we have exactly 3 questions with the required types
-                        return self._ensure_three_questions(questions)
+                        # Ensure we have exactly the expected number of questions with the required types
+                        return self._ensure_questions(questions, expected_count, allowed_types)
                 except json.JSONDecodeError:
                     pass
                 
@@ -268,8 +275,8 @@ class DeepSeekService:
                                 if isinstance(question, dict) and "text" in question:
                                     question["text"] = self._clean_question_text(question["text"])
                             
-                            # Ensure we have exactly 3 questions with the required types
-                            return self._ensure_three_questions(questions)
+                            # Ensure we have exactly the expected number of questions with the required types
+                            return self._ensure_questions(questions, expected_count, allowed_types)
                     except json.JSONDecodeError:
                         pass
                 
@@ -277,7 +284,7 @@ class DeepSeekService:
                 self.logger.warning("JSON parsing failed, attempting to extract questions from plain text")
                 questions = self._extract_questions_from_text(content)
                 if questions:
-                    return self._ensure_three_questions(questions)
+                    return self._ensure_questions(questions, expected_count, allowed_types)
                 
                 raise DeepSeekAPIError("Could not extract questions from response content.")
                 
@@ -289,33 +296,46 @@ class DeepSeekService:
             self.logger.error(f"Failed to parse DeepSeek response: {exc}")
             raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
 
-    def _ensure_three_questions(self, questions: list) -> list:
+    def _ensure_questions(self, questions: list, expected_count: int = 6, allowed_types: Optional[list] = None) -> list:
         """
-        Ensure exactly 3 questions with the required types: reason, example, impact.
+        Ensure exactly the expected number of questions with the required types.
         
         Args:
             questions (list): List of question dictionaries.
+            expected_count (int): Expected number of questions (default 6 for all types).
+            allowed_types (Optional[list]): List of allowed question types to determine the order.
             
         Returns:
-            list: Exactly 3 questions with the required types.
+            list: Exactly expected_count questions with the required types.
         """
-        self.logger.info(f"Ensuring 3 questions from {len(questions)} input questions")
+        self.logger.info(f"Ensuring {expected_count} questions from {len(questions)} input questions")
         
-        required_types = ['reason', 'example', 'impact']
+        # Determine the required types based on allowed_types or default to all 6
+        if allowed_types:
+            required_types = allowed_types
+        else:
+            all_types = ['reason', 'clarification', 'elaboration', 'example', 'impact', 'comparison']
+            required_types = all_types[:expected_count]
+        
         result = []
         
         # Type mapping for similar types
         type_mapping = {
-            'elaboration': 'reason',
-            'clarification': 'reason',
             'why': 'reason',
+            'clarify': 'clarification',
+            'explain': 'clarification',
+            'elaborate': 'elaboration',
+            'details': 'elaboration',
             'examples': 'example',
             'instance': 'example',
             'case': 'example',
             'effects': 'impact',
             'consequences': 'impact',
             'results': 'impact',
-            'outcomes': 'impact'
+            'outcomes': 'impact',
+            'compare': 'comparison',
+            'versus': 'comparison',
+            'difference': 'comparison'
         }
         
         # First, try to find questions with the exact required types
@@ -342,14 +362,22 @@ class DeepSeekService:
             
             # If we still didn't find a question with this type, create a default one
             if not found:
+                default_texts = {
+                    'reason': f"Why do you think this is the case?",
+                    'clarification': f"Can you clarify what you mean by this?",
+                    'elaboration': f"Can you provide more details about this?",
+                    'example': f"Can you give an example of this?",
+                    'impact': f"How does this affect you or others?",
+                    'comparison': f"How does this compare to other options?"
+                }
                 result.append({
                     'type': req_type,
-                    'text': f"Please provide more details about {req_type}."
+                    'text': default_texts.get(req_type, f"Please provide more details about {req_type}.")
                 })
                 self.logger.info(f"Created default question for {req_type}")
         
-        # Ensure we have exactly 3 questions
-        final_result = result[:3]
+        # Ensure we have exactly the expected number of questions
+        final_result = result[:expected_count]
         self.logger.info(f"Final result: {[q.get('type', 'unknown') for q in final_result]}")
         return final_result
 
@@ -415,8 +443,24 @@ class DeepSeekService:
         Returns:
             str: The formatted prompt.
         """
-        # For the main follow-up API, always generate exactly 3 questions with specific types
-        return f"Q: {question} A: {response}. Generate exactly 3 follow-up questions with these EXACT types: 1) type: 'reason' - ask why, 2) type: 'example' - ask for examples, 3) type: 'impact' - ask about effects. Return ONLY valid JSON with 'followups' array containing 3 objects with 'type' and 'text' fields."
+        # If allowed_types is provided, use those; otherwise use all 6 types
+        if allowed_types:
+            types_to_generate = allowed_types
+        else:
+            types_to_generate = ['reason', 'clarification', 'elaboration', 'example', 'impact', 'comparison']
+        
+        # Build the prompt with the specified types - optimized for speed
+        type_mapping = {
+            'reason': 'ask why',
+            'clarification': 'ask for clarification', 
+            'elaboration': 'ask for more details',
+            'example': 'ask for examples',
+            'impact': 'ask about effects',
+            'comparison': 'ask for comparison'
+        }
+        
+        types_text = ", ".join([f"'{t}' ({type_mapping.get(t, t)})" for t in types_to_generate])
+        return f"Q: {question} A: {response}. Generate {len(types_to_generate)} questions: {types_text}. Return JSON: {{\"followups\": [{{\"type\": \"type\", \"text\": \"question\"}}]}}"
 
     def generate_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> str:
         """
@@ -561,7 +605,7 @@ class DeepSeekService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Be flexible in determining informativeness. Consider responses informative if they provide ANY meaningful information, even if brief. Short answers, single words, or concise responses can be informative. Only mark as non-informative if the response is completely empty, unclear, or shows no engagement. Return ONLY '1' for informative or '0' for non-informative."
+                    "content": f"Analyze if the response is informative. Return ONLY '1' for informative or '0' for non-informative."
                 },
                 {
                     "role": "user",
@@ -623,22 +667,22 @@ class DeepSeekService:
         Returns:
             str: The formatted informativeness detection prompt.
         """
-        # Define non-informative patterns in multiple languages (more restrictive)
+        # Define non-informative patterns in multiple languages
         non_informative_patterns = {
-            "English": ["i don't know", "idk", "dunno", "n/a", "none", "nothing", "no idea", "not applicable", "skip", "pass"],
-            "Chinese": ["我不知道", "不知道", "不晓得", "无", "没有", "跳过", "不适用"],
-            "Japanese": ["わかりません", "知りません", "不明", "なし", "無し", "スキップ", "該当なし"],
-            "Spanish": ["no sé", "no lo sé", "ninguno", "nada", "no aplica", "saltar"],
-            "French": ["je ne sais pas", "aucun", "rien", "ne s'applique pas", "passer"],
-            "German": ["ich weiß nicht", "weiß nicht", "keiner", "nichts", "nicht zutreffend", "überspringen"],
-            "Korean": ["모르겠어요", "모름", "없음", "해당없음", "건너뛰기"]
+            "English": ["i don't know", "i don't know", "no", "yes", "maybe", "not sure", "unsure", "idk", "dunno", "n/a", "none", "nothing"],
+            "Chinese": ["我不知道", "不知道", "不", "是", "也许", "不确定", "不清楚", "没有", "无", "不晓得"],
+            "Japanese": ["わかりません", "知りません", "いいえ", "はい", "たぶん", "わからない", "不明", "なし", "無し"],
+            "Spanish": ["no sé", "no lo sé", "no", "sí", "tal vez", "no estoy seguro", "no estoy segura", "ninguno", "nada"],
+            "French": ["je ne sais pas", "je ne sais pas", "non", "oui", "peut-être", "pas sûr", "pas sûre", "aucun", "rien"],
+            "German": ["ich weiß nicht", "weiß nicht", "nein", "ja", "vielleicht", "nicht sicher", "keiner", "nichts"],
+            "Korean": ["모르겠어요", "모름", "아니요", "네", "아마", "불확실", "없음", "아무것도"]
         }
         
         # Get patterns for the specific language, default to English
         patterns = non_informative_patterns.get(language, non_informative_patterns["English"])
         patterns_str = ", ".join(patterns)
         
-        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Be flexible - even short answers, single words, or brief responses can be informative if they provide any meaningful information. Only consider non-informative if completely empty, unclear, or shows no engagement. Non-informative patterns include: {patterns_str}. Return '1' for informative or '0' for non-informative."
+        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Non-informative responses include: {patterns_str}. Return '1' for informative or '0' for non-informative."
 
     def generate_enhanced_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> dict:
         """

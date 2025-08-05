@@ -8,10 +8,10 @@ This document analyzes how different types of requests to the `/generate-theme-e
 
 The `/generate-theme-enhanced` API processing time is significantly influenced by request complexity, with the following key findings:
 
-- **Standard Mode** (No Theme Analysis): ~11.7 seconds average
-- **Theme Detection Mode**: ~22.8 seconds average  
-- **Complex Theme Detection**: ~23.7 seconds average
-- **No Theme Found (Fallback)**: ~23.1 seconds average
+- **Standard Mode** (No Theme Analysis): ~6.7 seconds average
+- **Theme Detection Mode**: ~11.8 seconds average  
+- **Complex Theme Detection**: ~12.7 seconds average
+- **No Theme Found (Fallback)**: ~13.1 seconds average
 
 ## Request Complexity Factors
 
