@@ -1,10 +1,10 @@
 # Survey Intelligence API - MVP
 
 ## Overview
-This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using DeepSeek LLM. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact. The API also includes enhanced multilingual support with informativeness detection and **theme-enhanced analysis**.
+This project is a Flask-based REST API that generates intelligent follow-up questions for open-ended survey responses using OpenAI GPT-4o-mini. It is designed for easy integration with survey platforms and provides exactly 3 contextually relevant follow-up questions per response with specific types: Reason, Example, and Impact. The API also includes enhanced multilingual support with informativeness detection and **theme-enhanced analysis**.
 
 ## Features
-- AI-powered question generation (DeepSeek LLM)
+- AI-powered question generation (OpenAI GPT-4o-mini)
 - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
 - **Enhanced multilingual support** with informativeness detection
 - **🆕 Theme-enhanced analysis** - detects themes in responses and generates contextually relevant questions
@@ -26,7 +26,7 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
 - pytest, Black, Flake8
 
 ## 🚀 Live Deployment
-**Production URL:** `https://follow-up-question-f00b29aae45c.herokuapp.com/`
+**Production URL:** `https://followup-ai-questions-e534ed0185cb.herokuapp.com/`
 
 ## Setup Instructions
 1. Clone the repository and navigate to the project directory.
@@ -49,9 +49,9 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
    ```bash
    pip install -r requirements.txt
    ```
-5. Create a `.env` file in the project root with your DeepSeek API key:
+5. Create a `.env` file in the project root with your OpenAI API key:
    ```env
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   OPENAI_API_KEY=your_openai_api_key_here
    ```
    
    **⚠️ Security Note**: Never commit your actual API key to Git. The `.env` file is already in `.gitignore`.
@@ -83,11 +83,11 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
   - `models.py` - Pydantic data models
   - `question_types.py` - Question type enums
   - `error_models.py` - Error response models
-  - `deepseek_service.py` - DeepSeek LLM integration
+  - `deepseek_service.py` - OpenAI LLM integration (OpenAIService class)
   - `log_config.py` - Logging configuration
 - `tests/` - Unit and integration tests
 - `requirements.txt` - Python dependencies
-- `.env` - Environment variables (DeepSeek API key)
+- `.env` - Environment variables (OpenAI API key)
 - `README.md` - Project documentation
 - `Survey_Intelligence_API.postman_collection.json` - Postman collection
 - `POSTMAN_TESTING_GUIDE.md` - Testing guide

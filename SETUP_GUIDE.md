@@ -5,7 +5,7 @@
 ### Prerequisites
 - Python 3.11 or higher
 - Git
-- DeepSeek API key (get from [DeepSeek](https://platform.deepseek.com/))
+- OpenAI API key (get from [OpenAI](https://platform.openai.com/))
 
 ### 1. Clone Repository
 ```bash
@@ -32,7 +32,7 @@ pip install -r requirements.txt
 ### 4. Configure Environment Variables
 Create a `.env` file in the project root:
 ```bash
-echo "DEEPSEEK_API_KEY=your_actual_api_key_here" > .env
+echo "OPENAI_API_KEY=your_actual_api_key_here" > .env
 ```
 
 **🔐 Security**: Never commit your actual API key to Git!

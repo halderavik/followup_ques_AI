@@ -1,11 +1,11 @@
 # Survey Intelligence API - MVP Development Tasks
 
 ## Project Overview
-Development of a minimal viable product (MVP) API that generates intelligent follow-up questions for survey responses using DeepSeek AI.
+Development of a minimal viable product (MVP) API that generates intelligent follow-up questions for survey responses using OpenAI GPT-4o-mini.
 
 ## MVP Scope
-- Single REST API endpoint
-- DeepSeek LLM integration
+- Multiple REST API endpoints
+- OpenAI LLM integration
 - Basic authentication
 - Core question generation functionality
 - Essential documentation
@@ -25,8 +25,8 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **1.2.3** Implement input validation schemas
 - [x] **1.2.4** Create error response models
 
-### 1.3 DeepSeek Integration (Days 2-3)
-- [x] **1.3.1** Create DeepSeek API service class
+### 1.3 OpenAI Integration (Days 2-3)
+- [x] **1.3.1** Create OpenAI API service class
 - [x] **1.3.2** Implement prompt templates
 - [x] **1.3.3** Add API call functionality with error handling
 - [x] **1.3.4** Create response parsing logic
@@ -37,7 +37,7 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **1.4.2** Implement `/generate-followup` endpoint
 - [x] **1.4.3** Add `/health` endpoint
 - [x] **1.4.4** Create `/question-types` endpoint
-- [x] **1.4.5** Remove user authentication (DeepSeek API key is server-side only)
+- [x] **1.4.5** Remove user authentication (OpenAI API key is server-side only)
 - [x] **1.4.6** Add root endpoint (`/`) with API information
 - [x] **1.4.7** Implement `/generate-reason` endpoint for single reason-based questions
 
@@ -52,7 +52,7 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 ## Week 2: Testing & Quality
 
 ### 2.1 Unit Testing (Days 6-7)
-- [x] **2.1.1** Write tests for DeepSeek service
+- [x] **2.1.1** Write tests for OpenAI service
 - [x] **2.1.2** Create tests for API endpoints
 - [x] **2.1.3** Test input validation and error handling
 - [x] **2.1.4** Add test coverage reporting
@@ -62,7 +62,7 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 
 ### 2.2 Integration Testing (Day 8)
 - [x] **2.2.1** Test full API workflow end-to-end
-- [x] **2.2.2** Test with real DeepSeek API calls
+- [x] **2.2.2** Test with real OpenAI API calls
 - [x] **2.2.3** Validate response quality and format
 - [x] **2.2.4** Test authentication mechanisms
 - [x] **2.2.5** Performance testing with sample load
@@ -210,24 +210,24 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 ### Week 1: Core Development ✅
 - **Project Setup**: Complete Flask structure with modular design
 - **Data Models**: Pydantic models for request/response, question types enum, error models
-- **DeepSeek Integration**: Service class with correct API endpoint, prompt templates, error handling, timeout/retry
+- **OpenAI Integration**: Service class with correct API endpoint, prompt templates, error handling, timeout/retry
 - **API Implementation**: All endpoints (/, /generate-followup, /health, /question-types) without user authentication
 - **Error Handling**: Comprehensive error handling, validation, logging
 - **🆕 NEW ENDPOINT**: `/generate-reason` for single reason-based questions
 
 ### Week 2: Testing & Quality ✅
-- **Unit Testing**: DeepSeek service tests pass, API tests created (fixture dependency)
+- **Unit Testing**: OpenAI service tests pass, API tests created (fixture dependency)
 - **Integration Testing**: API endpoints verified working via direct testing
 - **Test Issue Resolution**: Created custom test runner to bypass pytest plugin conflicts
-- **DeepSeek Integration**: Successfully tested with real API calls and response parsing
+- **OpenAI Integration**: Successfully tested with real API calls and response parsing
 - **🆕 NEW ENDPOINT TESTING**: Comprehensive tests for `/generate-reason` endpoint
 
 ### Technical Notes
 - **Pytest Issue**: langsmith plugin conflicts with Pydantic v2.4.2 on Python 3.13
 - **Solution**: Custom test runner (`run_tests.py`) for core functionality testing
 - **API Verification**: All endpoints tested and working via direct HTTP requests
-- **DeepSeek Integration**: Fully functional with correct API endpoint and response parsing
-- **Authentication**: Removed user authentication - DeepSeek API key is server-side only
+- **OpenAI Integration**: Fully functional with correct API endpoint and response parsing
+- **Authentication**: Removed user authentication - OpenAI API key is server-side only
 - **🆕 NEW ENDPOINT**: `/generate-reason` successfully deployed to Heroku and tested
 
 ## Next Steps
@@ -275,3 +275,21 @@ Development of a minimal viable product (MVP) API that generates intelligent fol
 - [x] **Activity Log** - Real-time request/response logging
 - [x] **Mobile Responsive** - Works on desktop and mobile devices
 - [x] **Auto-refresh** - Automatic performance metrics updates
+
+### OpenAI Migration (Completed - August 2025)
+- [x] **Migration from DeepSeek to OpenAI** - Successfully migrated all code from DeepSeek to OpenAI GPT-4o-mini
+- [x] **API Key Configuration** - Updated environment variables and Heroku configuration
+- [x] **Error Handling Updates** - Updated all error references from DeepSeek to OpenAI
+- [x] **Documentation Updates** - Updated all documentation to reflect OpenAI integration
+- [x] **Test Updates** - Updated all test files to use OpenAIService and OpenAIAPIError
+- [x] **Performance Testing** - Conducted comprehensive performance testing on all endpoints
+- [x] **Deployment Verification** - Successfully deployed to Heroku with working API key
+- [x] **Response Time Analysis** - Documented performance metrics for all endpoints
+
+### Performance Testing Results (August 2025)
+- [x] **`/generate-followup`** (reason only): 2,394 ms (~2.4 seconds)
+- [x] **`/generate-reason`**: 2,678 ms (~2.7 seconds)
+- [x] **`/generate-multilingual`**: 2,009 ms (~2.0 seconds)
+- [x] **`/generate-enhanced-multilingual`**: 3,215 ms (~3.2 seconds)
+- [x] **`/generate-theme-enhanced`** (standard): 1,795 ms (~1.8 seconds)
+- [x] **`/generate-theme-enhanced`** (theme analysis): 2,278 ms (~2.3 seconds)

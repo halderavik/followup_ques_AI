@@ -4,7 +4,7 @@
 
 The Survey Intelligence API generates intelligent follow-up questions for open-ended survey responses using advanced AI. This API is designed to integrate seamlessly with survey platforms like **Qualtrics**, **SurveyMonkey**, and other survey tools to enhance data collection and respondent engagement.
 
-**Live API URL**: `https://follow-up-question-f00b29aae45c.herokuapp.com/`
+**Live API URL**: `https://followup-ai-questions-e534ed0185cb.herokuapp.com/`
 
 ## 🎯 Use Cases
 
@@ -25,7 +25,7 @@ The Survey Intelligence API generates intelligent follow-up questions for open-e
 
 ### Base URL
 ```
-https://follow-up-question-f00b29aae45c.herokuapp.com
+https://followup-ai-questions-e534ed0185cb.herokuapp.com
 ```
 
 ### 1. API Information
@@ -1006,10 +1006,26 @@ generateThemeEnhancedQuestion(
 4. **Cache responses** when appropriate to reduce API calls
 5. **Monitor API usage** and implement rate limiting if needed
 
-## 📊 Rate Limits & Performance
+## 📊 Performance & Response Times
 
+### API Performance Metrics (Updated August 2025)
+
+**Average Response Times:**
+- **`/generate-followup`** (with only 'reason' type): **2,394 ms** (~2.4 seconds)
+- **`/generate-reason`**: **2,678 ms** (~2.7 seconds)
+- **`/generate-multilingual`**: **2,009 ms** (~2.0 seconds)
+- **`/generate-enhanced-multilingual`**: **3,215 ms** (~3.2 seconds)
+- **`/generate-theme-enhanced`** (standard): **1,795 ms** (~1.8 seconds)
+- **`/generate-theme-enhanced`** (theme analysis): **2,278 ms** (~2.3 seconds)
+
+**Performance Insights:**
+- **Fastest endpoint**: `/generate-theme-enhanced` (standard mode) at ~1.8 seconds
+- **Slowest endpoint**: `/generate-enhanced-multilingual` at ~3.2 seconds
+- **Consistent performance**: All endpoints respond within 1.8-3.2 seconds
+- **Enhanced features**: Theme analysis and informativeness detection add ~0.5-1.4 seconds
+
+### Rate Limits & Availability
 - **No rate limits** currently applied
-- **Response time**: Typically 6-7 seconds
 - **Availability**: 99.9% uptime
 - **Recommended**: Implement client-side caching for repeated requests
 
@@ -1024,7 +1040,7 @@ generateThemeEnhancedQuestion(
 
 For technical support or questions about integration:
 - **Documentation**: This API.md file
-- **Live API**: https://follow-up-question-f00b29aae45c.herokuapp.com/
+- **Live API**: https://followup-ai-questions-e534ed0185cb.herokuapp.com/
 - **GitHub Repository**: https://github.com/halderavik/followup_ques_AI
 
 ## 🚀 Getting Started Checklist

@@ -6,11 +6,11 @@
 - **Flask 2.3.3**: Lightweight web framework for MVP
 - **Python 3.9+**: Core programming language
 - **Pydantic 2.4.2**: Data validation and serialization
-- **Requests 2.31.0**: HTTP client for DeepSeek API
+- **Requests 2.31.0**: HTTP client for OpenAI API
 - **Python-dotenv**: Environment variable management
 
 ### AI Integration
-- **DeepSeek API**: Primary and only LLM provider for MVP
+- **OpenAI API (GPT-4o-mini)**: Primary and only LLM provider for MVP
 - **Custom Prompt Templates**: Simple string formatting
 
 ### Development Tools

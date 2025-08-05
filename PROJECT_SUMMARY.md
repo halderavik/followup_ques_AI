@@ -2,14 +2,14 @@
 
 ## 🎯 Project Overview
 
-The Survey Intelligence API is a fully functional Flask-based REST API that generates intelligent follow-up questions for survey responses using DeepSeek LLM. The API is designed to help survey creators gather deeper insights by automatically suggesting exactly 3 relevant follow-up questions with specific types: Reason, Example, and Impact.
+The Survey Intelligence API is a fully functional Flask-based REST API that generates intelligent follow-up questions for survey responses using OpenAI GPT-4o-mini. The API is designed to help survey creators gather deeper insights by automatically suggesting exactly 3 relevant follow-up questions with specific types: Reason, Example, and Impact.
 
 ## ✅ Current Status: MVP Complete
 
 ### Core Features Implemented
 
 1. **AI-Powered Question Generation**
-   - DeepSeek LLM integration with correct API endpoint
+   - OpenAI GPT-4o-mini integration with correct API endpoint
    - Intelligent prompt engineering for context-aware questions
    - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
    - Type mapping and fallback mechanisms for reliable output
@@ -25,7 +25,7 @@ The Survey Intelligence API is a fully functional Flask-based REST API that gene
 
 3. **User-Friendly Architecture**
    - No authentication required for users
-   - DeepSeek API key configured server-side only
+   - OpenAI API key configured server-side only
    - Simple JSON request/response format
    - Comprehensive error handling and validation
 
@@ -80,11 +80,11 @@ AI_followup_ques/
 │   ├── models.py            # Pydantic data models
 │   ├── question_types.py    # Question type enums
 │   ├── error_models.py      # Error response models
-│   ├── deepseek_service.py  # DeepSeek LLM integration
+│   ├── deepseek_service.py  # OpenAI LLM integration (OpenAIService class)
 │   └── log_config.py        # Logging configuration
 ├── tests/
 │   ├── test_api.py          # API endpoint tests
-│   └── test_deepseek_service.py # Service tests
+│   └── test_deepseek_service.py # OpenAI service tests
 ├── requirements.txt         # Python dependencies
 ├── .env                     # Environment variables
 ├── main.py                  # Application entry point
@@ -118,8 +118,8 @@ AI_followup_ques/
 
 2. **Configuration**
    ```bash
-   # Create .env file with your DeepSeek API key
-   DEEPSEEK_API_KEY=your_deepseek_api_key_here
+   # Create .env file with your OpenAI API key
+   OPENAI_API_KEY=your_openai_api_key_here
    ```
 
 3. **Run Application**
@@ -132,12 +132,23 @@ AI_followup_ques/
    - Postman: Import collection and run requests
    - PowerShell: Use provided commands
 
-## 📊 Performance Metrics
+## 📊 Performance Metrics (Updated August 2025)
 
-- **Response Time**: < 3 seconds (target achieved)
+### API Response Times
+- **`/generate-followup`** (reason only): **2,394 ms** (~2.4 seconds)
+- **`/generate-reason`**: **2,678 ms** (~2.7 seconds)
+- **`/generate-multilingual`**: **2,009 ms** (~2.0 seconds)
+- **`/generate-enhanced-multilingual`**: **3,215 ms** (~3.2 seconds)
+- **`/generate-theme-enhanced`** (standard): **1,795 ms** (~1.8 seconds)
+- **`/generate-theme-enhanced`** (theme analysis): **2,278 ms** (~2.3 seconds)
+
+### Performance Insights
+- **Fastest endpoint**: `/generate-theme-enhanced` (standard mode) at ~1.8 seconds
+- **Slowest endpoint**: `/generate-enhanced-multilingual` at ~3.2 seconds
+- **Consistent performance**: All endpoints respond within 1.8-3.2 seconds
 - **Question Quality**: Contextually relevant and intelligent
 - **Error Handling**: Comprehensive validation and error responses
-- **Uptime**: Stable Flask development server
+- **Uptime**: Stable production deployment on Heroku
 
 ## 🎯 Success Criteria Met
 
@@ -199,7 +210,7 @@ AI_followup_ques/
 ## 🏆 Project Achievements
 
 - ✅ **Complete MVP** with all core features
-- ✅ **Working DeepSeek Integration** with intelligent question generation
+- ✅ **Working OpenAI Integration** with intelligent question generation
 - ✅ **Enhanced Multilingual Support** with informativeness detection
 - ✅ **User-Friendly API** with no authentication complexity
 - ✅ **Comprehensive Testing** and documentation
