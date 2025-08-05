@@ -23,7 +23,7 @@ class DeepSeekService:
     API_URL = "https://api.deepseek.com/v1/chat/completions"
     TIMEOUT = 15  # Reduced timeout for faster response
     RETRIES = 1   # Keep retries for reliability
-    MAX_TOKENS = 150  # Optimized for faster generation
+    MAX_TOKENS = 100  # Reduced for faster generation
 
     def __init__(self):
         """
@@ -130,9 +130,9 @@ class DeepSeekService:
                     "content": prompt
                 }
             ],
-            "temperature": 0.05,  # Even lower temperature for fastest responses
+            "temperature": 0.01,  # Even lower temperature for fastest responses
             "max_tokens": self.MAX_TOKENS,
-            "top_p": 0.5,        # Lower for faster generation
+            "top_p": 0.3,        # Lower for faster generation
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False      # Keep no streaming for faster response
