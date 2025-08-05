@@ -7,7 +7,7 @@ import json
 def client():
     app = create_app()
     app.config['TESTING'] = True
-    app.config['DEEPSEEK_API_KEY'] = 'test-key'
+    app.config['OPENAI_API_KEY'] = 'test-key'
     with app.test_client() as client:
         yield client
 
@@ -44,11 +44,11 @@ def test_generate_followup_validation_error(client):
 
 
 def test_generate_followup_success(client, monkeypatch):
-    """Test /generate-followup returns followups on valid input and mocks DeepSeekService."""
-    # Patch DeepSeekService methods
-    from app.deepseek_service import DeepSeekService
-    monkeypatch.setattr(DeepSeekService, 'generate_questions', lambda self, prompt: {"followups": [{"type": "reason", "text": "Why?"}]} )
-    monkeypatch.setattr(DeepSeekService, 'parse_response', lambda self, resp: resp["followups"])
+    """Test /generate-followup returns followups on valid input and mocks OpenAIService."""
+    # Patch OpenAIService methods
+    from app.deepseek_service import OpenAIService
+    monkeypatch.setattr(OpenAIService, 'generate_questions', lambda self, prompt: {"choices": [{"message": {"content": '{"followups": [{"type": "reason", "text": "Why?"}]}'}}]})
+    monkeypatch.setattr(OpenAIService, 'parse_response', lambda self, resp: [{"type": "reason", "text": "Why?"}])
     payload = {
         "question": "What did you like?",
         "response": "The service was fast.",
@@ -79,10 +79,10 @@ def test_generate_reason_validation_error(client):
 
 def test_generate_reason_success(client, monkeypatch):
     """Test /generate-reason returns single reason question on valid input."""
-    # Patch DeepSeekService methods
-    from app.deepseek_service import DeepSeekService
-    monkeypatch.setattr(DeepSeekService, 'generate_questions', lambda self, prompt: {"followups": [{"type": "reason", "text": "Why did you find the service fast?"}]})
-    monkeypatch.setattr(DeepSeekService, 'parse_response', lambda self, resp: resp["followups"])
+    # Patch OpenAIService methods
+    from app.deepseek_service import OpenAIService
+    monkeypatch.setattr(OpenAIService, 'generate_questions', lambda self, prompt: {"choices": [{"message": {"content": '{"followups": [{"type": "reason", "text": "Why did you find the service fast?"}]}'}}]})
+    monkeypatch.setattr(OpenAIService, 'parse_response', lambda self, resp: [{"type": "reason", "text": "Why did you find the service fast?"}])
     
     payload = {
         "question": "What did you like?",
@@ -100,10 +100,10 @@ def test_generate_reason_success(client, monkeypatch):
 
 def test_generate_reason_no_question_generated(client, monkeypatch):
     """Test /generate-reason returns error when no question is generated."""
-    # Patch DeepSeekService methods to return empty response
-    from app.deepseek_service import DeepSeekService
-    monkeypatch.setattr(DeepSeekService, 'generate_questions', lambda self, prompt: {"followups": []})
-    monkeypatch.setattr(DeepSeekService, 'parse_response', lambda self, resp: resp["followups"])
+    # Patch OpenAIService methods to return empty response
+    from app.deepseek_service import OpenAIService
+    monkeypatch.setattr(OpenAIService, 'generate_questions', lambda self, prompt: {"choices": [{"message": {"content": '{"followups": []}'}}]})
+    monkeypatch.setattr(OpenAIService, 'parse_response', lambda self, resp: [])
     
     payload = {
         "question": "What did you like?",

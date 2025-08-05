@@ -5,7 +5,7 @@ Test module for enhanced multilingual API endpoint with informativeness detectio
 import pytest
 import json
 from app import create_app
-from app.deepseek_service import DeepSeekService
+from app.deepseek_service import OpenAIService
 
 class TestEnhancedMultilingualAPI:
     """Test cases for enhanced multilingual API endpoint."""
@@ -217,12 +217,12 @@ class TestEnhancedMultilingualAPI:
         assert result['question'] is None
 
 
-class TestDeepSeekServiceEnhancedMultilingual:
-    """Test cases for DeepSeek service enhanced multilingual functionality."""
+class TestOpenAIServiceEnhancedMultilingual:
+    """Test cases for OpenAI service enhanced multilingual functionality."""
 
     def test_detect_informativeness_english_informative(self):
         """Test informativeness detection with English informative response."""
-        service = DeepSeekService()
+        service = OpenAIService()
         
         # Mock the API call to avoid actual API calls during testing
         # This test would need to be run with actual API key for full testing
@@ -236,11 +236,11 @@ class TestDeepSeekServiceEnhancedMultilingual:
             assert isinstance(result, bool)
         except Exception as e:
             # If API key not available, test should be skipped
-            pytest.skip(f"DeepSeek API not available: {e}")
+            pytest.skip(f"OpenAI API not available: {e}")
 
     def test_detect_informativeness_english_non_informative(self):
         """Test informativeness detection with English non-informative response."""
-        service = DeepSeekService()
+        service = OpenAIService()
         
         try:
             result = service.detect_informativeness(
@@ -251,11 +251,11 @@ class TestDeepSeekServiceEnhancedMultilingual:
             # Should return False for non-informative response
             assert isinstance(result, bool)
         except Exception as e:
-            pytest.skip(f"DeepSeek API not available: {e}")
+            pytest.skip(f"OpenAI API not available: {e}")
 
     def test_build_informativeness_prompt(self):
         """Test building informativeness detection prompt."""
-        service = DeepSeekService()
+        service = OpenAIService()
         
         prompt = service._build_informativeness_prompt(
             "What challenges do you face?",
@@ -270,7 +270,7 @@ class TestDeepSeekServiceEnhancedMultilingual:
 
     def test_build_informativeness_prompt_chinese(self):
         """Test building informativeness detection prompt for Chinese."""
-        service = DeepSeekService()
+        service = OpenAIService()
         
         prompt = service._build_informativeness_prompt(
             "你在工作中面临什么挑战？",

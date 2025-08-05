@@ -18,7 +18,7 @@ def create_app() -> Flask:
     setup_logging()
     app.logger.info('Survey Intelligence API starting up.')
 
-    # DeepSeek API key is loaded directly by the service
+    # OpenAI API key is loaded directly by the service
     # No need to store in app config since users don't provide it
 
     # Request/response logging

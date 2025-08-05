@@ -3,7 +3,7 @@ from pydantic import ValidationError
 from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse, MultilingualQuestionRequest, MultilingualQuestionResponse, EnhancedMultilingualRequest, EnhancedMultilingualResponse, ThemeEnhancedRequest, ThemeEnhancedResponse
 from .question_types import QuestionType
 from .error_models import ErrorResponse, ValidationErrorResponse
-from .deepseek_service import DeepSeekService, DeepSeekAPIError
+from .deepseek_service import OpenAIService, OpenAIAPIError
 # Authentication removed - no import needed
 
 bp = Blueprint('api', __name__)
@@ -26,7 +26,7 @@ def root():
     """
     return jsonify({
         "name": "Survey Intelligence API",
-        "description": "Generate intelligent follow-up questions for survey responses using DeepSeek AI",
+        "description": "Generate intelligent follow-up questions for survey responses using OpenAI AI",
         "version": "1.0.0",
         "endpoints": {
             "health": "/health",
@@ -93,7 +93,7 @@ def generate_followup():
             code="bad_request"
         ).dict()), 400
 
-    service = DeepSeekService()
+    service = OpenAIService()
     allowed_types_list = [t.value for t in req.allowed_types] if req.allowed_types else None
     prompt = service.build_prompt(req.question, req.response, allowed_types_list)
     try:
@@ -103,10 +103,10 @@ def generate_followup():
             followups=[FollowupQuestion(type=QuestionType(f["type"]), text=f["text"]) for f in followups]
         )
         return jsonify(response.dict()), 200
-    except DeepSeekAPIError as dse:
+    except OpenAIAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),
-            code="deepseek_error"
+            code="openai_error"
         ).dict()), 502
     except Exception as exc:
         return jsonify(ErrorResponse(
@@ -123,8 +123,8 @@ def performance():
         JSON: Performance metrics and cache statistics.
     """
     try:
-        from .deepseek_service import DeepSeekService
-        service = DeepSeekService()
+        from .deepseek_service import OpenAIService
+        service = OpenAIService()
         
         # Clean up cache
         service.cleanup_cache()
@@ -165,7 +165,7 @@ def generate_reason():
             code="bad_request"
         ).dict()), 400
 
-    service = DeepSeekService()
+    service = OpenAIService()
     # Force question type to be REASON only
     prompt = service.build_prompt(req.question, req.response, ["REASON"])
     try:
@@ -186,10 +186,10 @@ def generate_reason():
                 detail="No follow-up question generated",
                 code="no_question_generated"
             ).dict()), 500
-    except DeepSeekAPIError as dse:
+    except OpenAIAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),
-            code="deepseek_error"
+            code="openai_error"
         ).dict()), 502
     except Exception as exc:
         return jsonify(ErrorResponse(
@@ -220,7 +220,7 @@ def generate_multilingual():
             code="bad_request"
         ).dict()), 400
 
-    service = DeepSeekService()
+    service = OpenAIService()
     try:
         # Generate multilingual question using the new optimized method
         question_text = service.generate_multilingual_question(
@@ -238,10 +238,10 @@ def generate_multilingual():
             language=req.language
         )
         return jsonify(response.dict()), 200
-    except DeepSeekAPIError as dse:
+    except OpenAIAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),
-            code="deepseek_error"
+            code="openai_error"
         ).dict()), 502
     except Exception as exc:
         return jsonify(ErrorResponse(
@@ -272,7 +272,7 @@ def generate_enhanced_multilingual():
             code="bad_request"
         ).dict()), 400
 
-    service = DeepSeekService()
+    service = OpenAIService()
     try:
         # Generate enhanced multilingual question with informativeness detection
         result = service.generate_enhanced_multilingual_question(
@@ -291,10 +291,10 @@ def generate_enhanced_multilingual():
             language=req.language
         )
         return jsonify(response.dict()), 200
-    except DeepSeekAPIError as dse:
+    except OpenAIAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),
-            code="deepseek_error"
+            code="openai_error"
         ).dict()), 502
     except Exception as exc:
         return jsonify(ErrorResponse(
@@ -325,7 +325,7 @@ def generate_theme_enhanced():
             code="bad_request"
         ).dict()), 400
 
-    service = DeepSeekService()
+    service = OpenAIService()
     try:
         # Generate theme-enhanced multilingual question
         result = service.generate_theme_enhanced_question(
@@ -351,10 +351,10 @@ def generate_theme_enhanced():
             highest_importance_theme=result.get("highest_importance_theme")
         )
         return jsonify(response.dict()), 200
-    except DeepSeekAPIError as dse:
+    except OpenAIAPIError as dse:
         return jsonify(ErrorResponse(
             detail=str(dse),
-            code="deepseek_error"
+            code="openai_error"
         ).dict()), 502
     except Exception as exc:
         return jsonify(ErrorResponse(

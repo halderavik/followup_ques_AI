@@ -210,7 +210,7 @@ Generates a single follow-up question in the specified language. The original qu
 - French (Français)
 - German (Deutsch)
 - Korean (한국어)
-- And more (any language DeepSeek supports)
+- And more (any language OpenAI supports)
 
 **Supported Question Types:**
 - `reason` - Ask why

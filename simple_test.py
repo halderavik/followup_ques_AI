@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from app.deepseek_service import DeepSeekService
+from app.deepseek_service import OpenAIService
 
 def test_scenario(service, question, response, scenario_name):
     """Test a single scenario and print results"""
@@ -28,7 +28,7 @@ def test_scenario(service, question, response, scenario_name):
 def main():
     print("Testing informativeness detection with complex real-life scenarios...")
     
-    service = DeepSeekService()
+    service = OpenAIService()
     
     # Define test scenarios
     scenarios = [

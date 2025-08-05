@@ -10,30 +10,30 @@ import hashlib
 import time
 import concurrent.futures
 
-class DeepSeekAPIError(Exception):
+class OpenAIAPIError(Exception):
     """
-    Custom exception for DeepSeek API errors.
+    Custom exception for OpenAI API errors.
     """
     pass
 
-class DeepSeekService:
+class OpenAIService:
     """
-    Service class for interacting with the DeepSeek LLM API.
+    Service class for interacting with the OpenAI LLM API.
     """
-    API_URL = "https://api.deepseek.com/v1/chat/completions"
+    API_URL = "https://api.openai.com/v1/chat/completions"
     TIMEOUT = 15  # Reduced timeout for faster response
     RETRIES = 1   # Keep retries for reliability
     MAX_TOKENS = 100  # Reduced for faster generation
 
     def __init__(self):
         """
-        Initialize the DeepSeekService.
-        Uses the DeepSeek API key from environment variables.
+        Initialize the OpenAIService.
+        Uses the OpenAI API key from environment variables.
         """
-        self.api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.api_key = os.getenv("OPENAI_API_KEY")
         if not self.api_key:
-            raise ValueError("DeepSeek API key not provided in environment variables.")
-        self.logger = logging.getLogger("DeepSeekService")
+            raise ValueError("OpenAI API key not provided in environment variables.")
+        self.logger = logging.getLogger("OpenAIService")
         
         # Create a session with connection pooling for better performance
         self.session = requests.Session()
@@ -59,7 +59,7 @@ class DeepSeekService:
         
         # Pre-warm connection pool for faster initial requests
         try:
-            self.session.get("https://api.deepseek.com", timeout=1)
+            self.session.get("https://api.openai.com", timeout=1)
         except:
             pass  # Ignore pre-warm failures
         
@@ -99,7 +99,7 @@ class DeepSeekService:
     
     def generate_questions(self, prompt: str) -> Dict[str, Any]:
         """
-        Call DeepSeek API to generate follow-up questions.
+        Call OpenAI API to generate follow-up questions.
 
         Args:
             prompt (str): The prompt to send to the LLM.
@@ -108,7 +108,7 @@ class DeepSeekService:
             Dict[str, Any]: The API response JSON.
 
         Raises:
-            DeepSeekAPIError: If the API call fails.
+            OpenAIAPIError: If the API call fails.
         """
         # Check cache first
         cache_key = self._get_cache_key(prompt)
@@ -119,7 +119,7 @@ class DeepSeekService:
         # Track performance
         start_time = time.time()
         payload = {
-            "model": "deepseek-chat",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
@@ -151,15 +151,15 @@ class DeepSeekService:
                 
                 # Log performance metrics
                 elapsed_time = time.time() - start_time
-                self.logger.info(f"DeepSeek API call completed in {elapsed_time:.2f}s")
+                self.logger.info(f"OpenAI API call completed in {elapsed_time:.2f}s")
                 
                 return response_data
             else:
-                self.logger.error(f"DeepSeek API error: {response.status_code} {response.text}")
-                raise DeepSeekAPIError(f"API error: {response.status_code} {response.text}")
+                self.logger.error(f"OpenAI API error: {response.status_code} {response.text}")
+                raise OpenAIAPIError(f"API error: {response.status_code} {response.text}")
         except (RequestException, Timeout) as exc:
-            self.logger.error(f"DeepSeek API request failed: {exc}")
-            raise DeepSeekAPIError(f"Request failed: {exc}")
+            self.logger.error(f"OpenAI API request failed: {exc}")
+            raise OpenAIAPIError(f"Request failed: {exc}")
     
     def cleanup_cache(self):
         """Clean up expired cache entries."""
@@ -211,27 +211,27 @@ class DeepSeekService:
 
     def parse_response(self, api_response: dict, allowed_types: Optional[list] = None) -> list:
         """
-        Parse the DeepSeek API response to extract follow-up questions.
+        Parse the OpenAI API response to extract follow-up questions.
 
         Args:
-            api_response (dict): The raw API response from DeepSeek.
+            api_response (dict): The raw API response from OpenAI.
             allowed_types (Optional[list]): List of allowed question types to determine expected count.
 
         Returns:
             list: List of question dictionaries with 'type' and 'text' fields.
 
         Raises:
-            DeepSeekAPIError: If the response format is invalid or missing data.
+            OpenAIAPIError: If the response format is invalid or missing data.
         """
         try:
             # Extract the content from the chat completion response
             choices = api_response.get("choices", [])
             if not choices:
-                raise DeepSeekAPIError("No choices in DeepSeek API response.")
+                raise OpenAIAPIError("No choices in OpenAI API response.")
             
             content = choices[0].get("message", {}).get("content", "")
             if not content:
-                raise DeepSeekAPIError("No content in DeepSeek API response.")
+                raise OpenAIAPIError("No content in OpenAI API response.")
             
             # Determine expected count based on allowed_types
             if allowed_types:
@@ -286,15 +286,15 @@ class DeepSeekService:
                 if questions:
                     return self._ensure_questions(questions, expected_count, allowed_types)
                 
-                raise DeepSeekAPIError("Could not extract questions from response content.")
+                raise OpenAIAPIError("Could not extract questions from response content.")
                 
             except Exception as exc:
-                self.logger.error(f"Failed to parse DeepSeek response: {exc}")
-                raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
+                self.logger.error(f"Failed to parse OpenAI response: {exc}")
+                raise OpenAIAPIError(f"Failed to parse OpenAI response: {exc}")
                 
         except Exception as exc:
-            self.logger.error(f"Failed to parse DeepSeek response: {exc}")
-            raise DeepSeekAPIError(f"Failed to parse DeepSeek response: {exc}")
+            self.logger.error(f"Failed to parse OpenAI response: {exc}")
+            raise OpenAIAPIError(f"Failed to parse OpenAI response: {exc}")
 
     def _ensure_questions(self, questions: list, expected_count: int = 6, allowed_types: Optional[list] = None) -> list:
         """
@@ -433,7 +433,7 @@ class DeepSeekService:
     @staticmethod
     def build_prompt(question: str, response: str, allowed_types: Optional[list] = None) -> str:
         """
-        Build the prompt for the DeepSeek LLM.
+        Build the prompt for the OpenAI LLM.
 
         Args:
             question (str): The original survey question.
@@ -476,7 +476,7 @@ class DeepSeekService:
             str: The generated question in the target language.
 
         Raises:
-            DeepSeekAPIError: If the API call fails.
+            OpenAIAPIError: If the API call fails.
         """
         # Create cache key including language and type for better caching
         cache_key = self._get_cache_key(f"{question}:{response}:{question_type}:{language}")
@@ -491,7 +491,7 @@ class DeepSeekService:
         prompt = self._build_multilingual_prompt(question, response, question_type, language)
         
         payload = {
-            "model": "deepseek-chat",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
@@ -523,7 +523,7 @@ class DeepSeekService:
                 # Extract the question text directly
                 content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
                 if not content:
-                    raise DeepSeekAPIError("No content in multilingual response.")
+                    raise OpenAIAPIError("No content in multilingual response.")
                 
                 # Clean up the response (remove quotes, extra whitespace)
                 question_text = content.strip().strip('"').strip("'")
@@ -537,11 +537,11 @@ class DeepSeekService:
                 
                 return question_text
             else:
-                self.logger.error(f"DeepSeek API error: {response.status_code} {response.text}")
-                raise DeepSeekAPIError(f"API error: {response.status_code} {response.text}")
+                self.logger.error(f"OpenAI API error: {response.status_code} {response.text}")
+                raise OpenAIAPIError(f"API error: {response.status_code} {response.text}")
         except (RequestException, Timeout) as exc:
             self.logger.error(f"Multilingual API request failed: {exc}")
-            raise DeepSeekAPIError(f"Request failed: {exc}")
+            raise OpenAIAPIError(f"Request failed: {exc}")
 
     @staticmethod
     def _build_multilingual_prompt(question: str, response: str, question_type: str, language: str) -> str:
@@ -586,7 +586,7 @@ class DeepSeekService:
             bool: True if response is informative, False if non-informative.
 
         Raises:
-            DeepSeekAPIError: If the API call fails.
+            OpenAIAPIError: If the API call fails.
         """
         # Create cache key for informativeness detection
         cache_key = self._get_cache_key(f"informativeness:{question}:{response}:{language}")
@@ -601,7 +601,7 @@ class DeepSeekService:
         prompt = self._build_informativeness_prompt(question, response, language)
         
         payload = {
-            "model": "deepseek-chat",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
@@ -633,7 +633,7 @@ class DeepSeekService:
                 # Extract the classification result
                 content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
                 if not content:
-                    raise DeepSeekAPIError("No content in informativeness response.")
+                    raise OpenAIAPIError("No content in informativeness response.")
                 
                 # Parse the result (should be "1" or "0")
                 result = content.strip()
@@ -648,11 +648,11 @@ class DeepSeekService:
                 
                 return is_informative
             else:
-                self.logger.error(f"DeepSeek API error: {response.status_code} {response.text}")
-                raise DeepSeekAPIError(f"API error: {response.status_code} {response.text}")
+                self.logger.error(f"OpenAI API error: {response.status_code} {response.text}")
+                raise OpenAIAPIError(f"API error: {response.status_code} {response.text}")
         except (RequestException, Timeout) as exc:
             self.logger.error(f"Informativeness detection request failed: {exc}")
-            raise DeepSeekAPIError(f"Request failed: {exc}")
+            raise OpenAIAPIError(f"Request failed: {exc}")
 
     @staticmethod
     def _build_informativeness_prompt(question: str, response: str, language: str) -> str:
@@ -698,7 +698,7 @@ class DeepSeekService:
             dict: Dictionary with 'informative' flag and optional 'question' field.
 
         Raises:
-            DeepSeekAPIError: If the API call fails.
+            OpenAIAPIError: If the API call fails.
         """
         # First, detect if the response is informative
         is_informative = self.detect_informativeness(question, response, language)
@@ -717,7 +717,7 @@ class DeepSeekService:
                 "informative": 1,
                 "question": question_text
             }
-        except DeepSeekAPIError as e:
+        except OpenAIAPIError as e:
             # If question generation fails, still return informative=1 but with error
             self.logger.error(f"Failed to generate question for informative response: {e}")
             raise e
@@ -742,7 +742,7 @@ class DeepSeekService:
             prompt = self._build_theme_detection_prompt(response, themes)
             
             payload = {
-                "model": "deepseek-chat",
+                "model": "gpt-4o-mini",
                 "messages": [
                     {
                         "role": "system",
@@ -864,7 +864,7 @@ Choose the theme with the highest importance if multiple themes are found."""
             dict: Dictionary containing response data with theme information.
 
         Raises:
-            DeepSeekAPIError: If there's an error calling the DeepSeek API.
+            OpenAIAPIError: If there's an error calling the OpenAI API.
         """
         # If theme is "No", use standard workflow (fast path)
         if theme.lower() == "no":
@@ -878,7 +878,7 @@ Choose the theme with the highest importance if multiple themes are found."""
                     "theme_importance": None,
                     "highest_importance_theme": None
                 }
-            except DeepSeekAPIError as e:
+            except OpenAIAPIError as e:
                 self.logger.error(f"Failed to generate standard question: {e}")
                 raise e
 
@@ -931,7 +931,7 @@ Choose the theme with the highest importance if multiple themes are found."""
                     "theme_importance": detected_theme["importance"],
                     "highest_importance_theme": None
                 }
-            except DeepSeekAPIError as e:
+            except OpenAIAPIError as e:
                 self.logger.error(f"Failed to generate theme-based question: {e}")
                 raise e
         else:
@@ -952,7 +952,7 @@ Choose the theme with the highest importance if multiple themes are found."""
                     "theme_importance": None,
                     "highest_importance_theme": highest_theme["name"]
                 }
-            except DeepSeekAPIError as e:
+            except OpenAIAPIError as e:
                 self.logger.error(f"Failed to generate missing theme question: {e}")
                 raise e
 
@@ -980,7 +980,7 @@ Choose the theme with the highest importance if multiple themes are found."""
         prompt = self._build_theme_question_prompt(question, response, question_type, language, theme_name, theme_importance)
         
         payload = {
-            "model": "deepseek-chat",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
@@ -1053,7 +1053,7 @@ Question: [Your question here]
 Explanation: [Explain how this question addresses the missing theme]"""
 
         payload = {
-            "model": "deepseek-chat",
+            "model": "gpt-4o-mini",
             "messages": [
                 {
                     "role": "system",
