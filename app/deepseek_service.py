@@ -956,6 +956,170 @@ Choose the theme with the highest importance if multiple themes are found."""
                 self.logger.error(f"Failed to generate missing theme question: {e}")
                 raise e
 
+    def generate_theme_enhanced_optional_question(self, question: str, response: str, question_type: str, language: str, 
+                                                theme: str, check_informative: bool, theme_parameters: Optional[dict] = None) -> dict:
+        """
+        Generate a theme-enhanced multilingual follow-up question with optional informative detection.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's response to the question.
+            question_type (str): The type of follow-up question to generate.
+            language (str): The target language for the response.
+            theme (str): "Yes" to enable theme analysis, "No" for standard workflow.
+            check_informative (bool): Whether to check if response is informative (True) or skip detection (False).
+            theme_parameters (Optional[dict]): Theme parameters when theme="Yes".
+
+        Returns:
+            dict: Dictionary containing response data with theme information.
+
+        Raises:
+            OpenAIAPIError: If there's an error calling the OpenAI API.
+        """
+        # If theme is "No", use standard workflow (fast path)
+        if theme.lower() == "no":
+            try:
+                question_text = self.generate_multilingual_question(question, response, question_type, language)
+                return {
+                    "informative": None if not check_informative else 1,
+                    "question": question_text,
+                    "explanation": None,
+                    "theme": theme,
+                    "check_informative": check_informative,
+                    "detected_theme": None,
+                    "theme_importance": None,
+                    "highest_importance_theme": None
+                }
+            except OpenAIAPIError as e:
+                self.logger.error(f"Failed to generate standard question: {e}")
+                raise e
+
+        # Theme analysis workflow
+        if not theme_parameters or not theme_parameters.get("themes"):
+            raise ValueError("Theme parameters required when theme='Yes'")
+
+        themes = [{"name": t["name"], "importance": t["importance"]} for t in theme_parameters["themes"]]
+        
+        # If informative detection is disabled, skip it
+        if not check_informative:
+            # Run theme detection only
+            detected_theme = self.detect_themes_in_response(response, themes)
+            
+            if detected_theme:
+                # Theme found - generate question based on detected theme and type
+                try:
+                    result = self._generate_theme_based_question(
+                        question, response, question_type, language, 
+                        detected_theme["theme_name"], detected_theme["importance"]
+                    )
+                    return {
+                        "informative": None,
+                        "question": result["question"],
+                        "explanation": result["explanation"],
+                        "theme": theme,
+                        "check_informative": check_informative,
+                        "detected_theme": detected_theme["theme_name"],
+                        "theme_importance": detected_theme["importance"],
+                        "highest_importance_theme": None
+                    }
+                except OpenAIAPIError as e:
+                    self.logger.error(f"Failed to generate theme-based question: {e}")
+                    raise e
+            else:
+                # No themes found - ask about why important themes weren't mentioned
+                try:
+                    # Find highest importance theme
+                    highest_theme = max(themes, key=lambda x: x["importance"])
+                    
+                    result = self._generate_missing_theme_question(
+                        question, response, language, highest_theme["name"], highest_theme["importance"]
+                    )
+                    return {
+                        "informative": None,
+                        "question": result["question"],
+                        "explanation": result["explanation"],
+                        "theme": theme,
+                        "check_informative": check_informative,
+                        "detected_theme": None,
+                        "theme_importance": None,
+                        "highest_importance_theme": highest_theme["name"]
+                    }
+                except OpenAIAPIError as e:
+                    self.logger.error(f"Failed to generate missing theme question: {e}")
+                    raise e
+        
+        # If informative detection is enabled, use the original logic
+        start_time = time.time()
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            # Submit both tasks simultaneously
+            informativeness_future = executor.submit(self.detect_informativeness, question, response, language)
+            theme_detection_future = executor.submit(self.detect_themes_in_response, response, themes)
+            
+            # Wait for both results
+            is_informative = informativeness_future.result()
+            detected_theme = theme_detection_future.result()
+        
+        # Log performance improvement
+        elapsed_time = time.time() - start_time
+        self.logger.info(f"Parallel processing completed in {elapsed_time:.2f}s")
+        
+        # Early return for non-informative responses
+        if not is_informative:
+            return {
+                "informative": 0, 
+                "question": None,
+                "explanation": None,
+                "theme": theme,
+                "check_informative": check_informative,
+                "detected_theme": None,
+                "theme_importance": None,
+                "highest_importance_theme": None
+            }
+        
+        if detected_theme:
+            # Theme found - generate question based on detected theme and type
+            try:
+                result = self._generate_theme_based_question(
+                    question, response, question_type, language, 
+                    detected_theme["theme_name"], detected_theme["importance"]
+                )
+                return {
+                    "informative": 1,
+                    "question": result["question"],
+                    "explanation": result["explanation"],
+                    "theme": theme,
+                    "check_informative": check_informative,
+                    "detected_theme": detected_theme["theme_name"],
+                    "theme_importance": detected_theme["importance"],
+                    "highest_importance_theme": None
+                }
+            except OpenAIAPIError as e:
+                self.logger.error(f"Failed to generate theme-based question: {e}")
+                raise e
+        else:
+            # No themes found - ask about why important themes weren't mentioned
+            try:
+                # Find highest importance theme
+                highest_theme = max(themes, key=lambda x: x["importance"])
+                
+                result = self._generate_missing_theme_question(
+                    question, response, language, highest_theme["name"], highest_theme["importance"]
+                )
+                return {
+                    "informative": 1,
+                    "question": result["question"],
+                    "explanation": result["explanation"],
+                    "theme": theme,
+                    "check_informative": check_informative,
+                    "detected_theme": None,
+                    "theme_importance": None,
+                    "highest_importance_theme": highest_theme["name"]
+                }
+            except OpenAIAPIError as e:
+                self.logger.error(f"Failed to generate missing theme question: {e}")
+                raise e
+
     def _generate_theme_based_question(self, question: str, response: str, question_type: str, 
                                      language: str, theme_name: str, theme_importance: int) -> dict:
         """

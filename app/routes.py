@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, current_app, send_from_directory
 from pydantic import ValidationError
-from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse, MultilingualQuestionRequest, MultilingualQuestionResponse, EnhancedMultilingualRequest, EnhancedMultilingualResponse, ThemeEnhancedRequest, ThemeEnhancedResponse
+from .models import GenerateFollowupRequest, GenerateFollowupResponse, FollowupQuestion, SingleReasonRequest, SingleReasonResponse, MultilingualQuestionRequest, MultilingualQuestionResponse, EnhancedMultilingualRequest, EnhancedMultilingualResponse, ThemeEnhancedRequest, ThemeEnhancedResponse, ThemeEnhancedOptionalRequest, ThemeEnhancedOptionalResponse
 from .question_types import QuestionType
 from .error_models import ErrorResponse, ValidationErrorResponse
 from .deepseek_service import OpenAIService, OpenAIAPIError
@@ -36,6 +36,7 @@ def root():
             "generate_multilingual": "/generate-multilingual",
             "generate_enhanced_multilingual": "/generate-enhanced-multilingual",
             "generate_theme_enhanced": "/generate-theme-enhanced",
+            "generate_theme_enhanced_optional": "/generate-theme-enhanced-optional",
             "performance": "/performance"
         },
         "usage": {
@@ -46,6 +47,7 @@ def root():
             "generate_multilingual": "POST /generate-multilingual - Generate single multilingual question",
             "generate_enhanced_multilingual": "POST /generate-enhanced-multilingual - Generate multilingual question with informativeness detection",
             "generate_theme_enhanced": "POST /generate-theme-enhanced - Generate theme-enhanced multilingual question with theme analysis",
+            "generate_theme_enhanced_optional": "POST /generate-theme-enhanced-optional - Generate theme-enhanced multilingual question with optional informative detection",
             "performance": "GET /performance - Get performance metrics"
         }
     }), 200
@@ -346,6 +348,68 @@ def generate_theme_enhanced():
             type=req.type,
             language=req.language,
             theme=req.theme,
+            detected_theme=result.get("detected_theme"),
+            theme_importance=result.get("theme_importance"),
+            highest_importance_theme=result.get("highest_importance_theme")
+        )
+        return jsonify(response.dict()), 200
+    except OpenAIAPIError as dse:
+        return jsonify(ErrorResponse(
+            detail=str(dse),
+            code="openai_error"
+        ).dict()), 502
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Internal server error: {exc}",
+            code="internal_error"
+        ).dict()), 500 
+
+@bp.route('/generate-theme-enhanced-optional', methods=['POST'])
+def generate_theme_enhanced_optional():
+    """
+    Generate a theme-enhanced multilingual follow-up question with optional informative detection.
+
+    Returns:
+        JSON: Generated theme-enhanced multilingual follow-up question or error.
+    """
+    try:
+        data = request.get_json()
+        req = ThemeEnhancedOptionalRequest(**data)
+    except ValidationError as ve:
+        return jsonify(ValidationErrorResponse(
+            detail="Invalid request data.",
+            code="validation_error",
+            errors=ve.errors()
+        ).dict()), 422
+    except Exception as exc:
+        return jsonify(ErrorResponse(
+            detail=f"Malformed request: {exc}",
+            code="bad_request"
+        ).dict()), 400
+
+    service = OpenAIService()
+    try:
+        # Generate theme-enhanced multilingual question with optional informative detection
+        result = service.generate_theme_enhanced_optional_question(
+            req.question, 
+            req.response, 
+            req.type, 
+            req.language,
+            req.theme,
+            req.check_informative,
+            req.theme_parameters.dict() if req.theme_parameters else None
+        )
+        
+        response = ThemeEnhancedOptionalResponse(
+            informative=result["informative"],
+            question=result.get("question"),
+            explanation=result.get("explanation"),
+            original_question=req.question,
+            original_response=req.response,
+            type=req.type,
+            language=req.language,
+            theme=req.theme,
+            check_informative=req.check_informative,
             detected_theme=result.get("detected_theme"),
             theme_importance=result.get("theme_importance"),
             highest_importance_theme=result.get("highest_importance_theme")

@@ -191,4 +191,56 @@ class ThemeEnhancedResponse(BaseModel):
     theme: str = Field(..., description="The theme setting used ('Yes' or 'No').")
     detected_theme: Optional[str] = Field(None, description="The theme detected in the response (if any).")
     theme_importance: Optional[int] = Field(None, description="The importance percentage of detected theme.")
+    highest_importance_theme: Optional[str] = Field(None, description="The highest importance theme (when no themes found).")
+
+class ThemeEnhancedOptionalRequest(BaseModel):
+    """
+    Request model for theme-enhanced multilingual follow-up question generation with optional informative detection.
+
+    Args:
+        question (str): The original survey question (in the target language).
+        response (str): The user's answer to the survey question (in the target language).
+        type (str): The type of follow-up question (reason, impact, elaboration, etc.).
+        language (str): The target language for the response.
+        theme (str): "Yes" to enable theme analysis, "No" for standard workflow.
+        check_informative (bool): Whether to check if response is informative (True) or skip detection (False).
+        theme_parameters (Optional[ThemeParameters]): Theme parameters (required when theme="Yes").
+    """
+    question: str = Field(..., description="The original survey question (in the target language).")
+    response: str = Field(..., description="The user's answer to the survey question (in the target language).")
+    type: str = Field(..., description="The type of follow-up question.")
+    language: str = Field(..., description="The target language for the response.")
+    theme: str = Field(..., description="'Yes' to enable theme analysis, 'No' for standard workflow.")
+    check_informative: bool = Field(..., description="Whether to check if response is informative (True) or skip detection (False).")
+    theme_parameters: Optional[ThemeParameters] = Field(None, description="Theme parameters (required when theme='Yes').")
+
+class ThemeEnhancedOptionalResponse(BaseModel):
+    """
+    Response model for theme-enhanced multilingual follow-up question with optional informative detection.
+
+    Args:
+        informative (Optional[int]): 1 if response is informative, 0 if non-informative, None if not checked.
+        question (Optional[str]): The generated follow-up question.
+        explanation (Optional[str]): Explanation of how the question was generated (only if informative=1).
+        original_question (str): The original survey question.
+        original_response (str): The original user response.
+        type (str): The type of follow-up question requested.
+        language (str): The language of the generated question.
+        theme (str): The theme setting used ("Yes" or "No").
+        check_informative (bool): Whether informative detection was performed.
+        detected_theme (Optional[str]): The theme detected in the response (if any).
+        theme_importance (Optional[int]): The importance percentage of detected theme.
+        highest_importance_theme (Optional[str]): The highest importance theme (when no themes found).
+    """
+    informative: Optional[int] = Field(None, description="1 if response is informative, 0 if non-informative, None if not checked.")
+    question: Optional[str] = Field(None, description="The generated follow-up question.")
+    explanation: Optional[str] = Field(None, description="Explanation of how the question was generated (only if informative=1).")
+    original_question: str = Field(..., description="The original survey question.")
+    original_response: str = Field(..., description="The original user response.")
+    type: str = Field(..., description="The type of follow-up question requested.")
+    language: str = Field(..., description="The language of the generated question.")
+    theme: str = Field(..., description="The theme setting used ('Yes' or 'No').")
+    check_informative: bool = Field(..., description="Whether informative detection was performed.")
+    detected_theme: Optional[str] = Field(None, description="The theme detected in the response (if any).")
+    theme_importance: Optional[int] = Field(None, description="The importance percentage of detected theme.")
     highest_importance_theme: Optional[str] = Field(None, description="The highest importance theme (when no themes found).") 

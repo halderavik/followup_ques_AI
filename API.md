@@ -357,6 +357,145 @@ When a response is classified as non-informative (`informative: 0`), no follow-u
 }
 ```
 
+### 🆕 9. Generate Theme-Enhanced Question with Optional Informative Detection
+**POST** `/generate-theme-enhanced-optional`
+
+**NEW!** Generates a theme-enhanced multilingual follow-up question with optional informative detection. Users can choose whether to check if the response is informative or skip this detection for faster processing.
+
+**Request Body (Theme Analysis with Informative Detection Enabled):**
+```json
+{
+  "question": "How do you communicate with your team?",
+  "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": true,
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Request Body (Theme Analysis with Informative Detection Disabled):**
+```json
+{
+  "question": "How do you communicate with your team?",
+  "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": false,
+  "theme_parameters": {
+    "themes": [
+      {"name": "communication", "importance": 80},
+      {"name": "leadership", "importance": 60},
+      {"name": "collaboration", "importance": 70}
+    ]
+  }
+}
+```
+
+**Request Body (Standard Mode with Informative Detection Disabled):**
+```json
+{
+  "question": "What challenges do you face at work?",
+  "response": "I struggle with time management and communication.",
+  "type": "reason",
+  "language": "English",
+  "theme": "No",
+  "check_informative": false
+}
+```
+
+**Response (Theme Found with Informative Detection Enabled):**
+```json
+{
+  "informative": 1,
+  "question": "Can you provide an example of a situation where face-to-face meetings proved to be more effective than using email or Slack?",
+  "explanation": "This question focuses on the theme of 'communication' by asking the user to elaborate on their preference for face-to-face interactions...",
+  "original_question": "How do you communicate with your team?",
+  "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": true,
+  "detected_theme": "communication",
+  "theme_importance": 80,
+  "highest_importance_theme": null
+}
+```
+
+**Response (Theme Found with Informative Detection Disabled):**
+```json
+{
+  "informative": null,
+  "question": "Can you provide an example of a situation where a face-to-face meeting was more effective than using email or Slack?",
+  "explanation": "This question directly focuses on the theme of communication by asking for a specific example...",
+  "original_question": "How do you communicate with your team?",
+  "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+  "type": "elaboration",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": false,
+  "detected_theme": "communication",
+  "theme_importance": 80,
+  "highest_importance_theme": null
+}
+```
+
+**Response (Non-informative with Informative Detection Enabled):**
+```json
+{
+  "informative": 0,
+  "question": null,
+  "explanation": null,
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": true,
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": null
+}
+```
+
+**Response (Non-informative with Informative Detection Disabled):**
+```json
+{
+  "informative": null,
+  "question": "Why do you think communication might be a challenge at work, or do you feel it's not an issue for you?",
+  "explanation": "This question gently introduces the missing theme of 'communication' by connecting it to the user's response...",
+  "original_question": "What challenges do you face at work?",
+  "original_response": "I don't know",
+  "type": "reason",
+  "language": "English",
+  "theme": "Yes",
+  "check_informative": false,
+  "detected_theme": null,
+  "theme_importance": null,
+  "highest_importance_theme": "communication"
+}
+```
+
+**Key Features:**
+- **Optional Informative Detection**: Set `check_informative` to `true` to enable informative detection, or `false` to skip it for faster processing
+- **Performance Optimization**: When `check_informative` is `false`, the API skips the informative detection step, resulting in faster response times
+- **Flexible Usage**: Users can choose the level of analysis based on their needs
+- **Backward Compatibility**: Maintains all existing theme-enhanced functionality
+- **Multilingual Support**: Works with all supported languages
+
+**Use Cases:**
+- **High-Volume Processing**: Use `check_informative: false` for batch processing where speed is more important than informative detection
+- **Quality Assurance**: Use `check_informative: true` when you need to ensure responses are informative before generating follow-up questions
+- **Real-time Applications**: Use `check_informative: false` for real-time chat applications where response speed is critical
+
 ## 🎯 Theme-Enhanced API Features
 
 ### Theme Detection
