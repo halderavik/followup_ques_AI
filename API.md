@@ -46,7 +46,8 @@ Returns basic API information and available endpoints.
     "generate_reason": "/generate-reason",
     "generate_multilingual": "/generate-multilingual",
     "generate_enhanced_multilingual": "/generate-enhanced-multilingual",
-    "generate_theme_enhanced": "/generate-theme-enhanced"
+    "generate_theme_enhanced": "/generate-theme-enhanced",
+    "generate_theme_enhanced_optional": "/generate-theme-enhanced-optional"
   }
 }
 ```
@@ -533,7 +534,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
     var response = $('QR~' + questionId).value;
     
     // Call our API
-    fetch('https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup', {
+    fetch('https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -560,7 +561,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
 Qualtrics.SurveyEngine.addOnload(function() {
     var response = $('QR~QID1').value;
     
-    fetch('https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup', {
+    fetch('https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -583,7 +584,7 @@ Qualtrics.SurveyEngine.addOnload(function() {
 Qualtrics.SurveyEngine.addOnload(function() {
     var response = $('QR~QID1').value;
     
-    fetch('https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced', {
+    fetch('https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -625,7 +626,7 @@ app.post('/webhook/surveymonkey', (req, res) => {
     
     if (answer) {
         // Generate follow-up questions
-        fetch('https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup', {
+        fetch('https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -648,7 +649,7 @@ app.post('/webhook/surveymonkey', (req, res) => {
 
 #### cURL Example
 ```bash
-curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup \
+curl -X POST https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What is your favorite programming language?",
@@ -658,7 +659,7 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-foll
 
 #### cURL Example for Single Reason Question
 ```bash
-curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason \
+curl -X POST https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-reason \
   -H "Content-Type: application/json" \
   -d '{
     "question": "What challenges do you face at work?",
@@ -668,7 +669,7 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reas
 
 #### cURL Example for Theme-Enhanced API
 ```bash
-curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced \
+curl -X POST https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced \
   -H "Content-Type: application/json" \
   -d '{
     "question": "How do you communicate with your team?",
@@ -688,7 +689,7 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-them
 
 #### cURL Example with Equal Weights (Random Selection)
 ```bash
-curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced \
+curl -X POST https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced \
   -H "Content-Type: application/json" \
   -d '{
     "question": "How do you handle conflicts in your team?",
@@ -706,13 +707,33 @@ curl -X POST https://follow-up-question-f00b29aae45c.herokuapp.com/generate-them
   }'
 ```
 
+#### cURL Example for Theme-Enhanced Optional API
+```bash
+curl -X POST https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced-optional \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "How do you communicate with your team?",
+    "response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
+    "type": "elaboration",
+    "language": "English",
+    "theme": "Yes",
+    "check_informative": false,
+    "theme_parameters": {
+      "themes": [
+        {"name": "communication", "importance": 80},
+        {"name": "leadership", "importance": 60}
+      ]
+    }
+  }'
+```
+
 #### Python Example
 ```python
 import requests
 import json
 
 def generate_followup_questions(question, response):
-    url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup"
+    url = "https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup"
     
     payload = {
         "question": question,
@@ -745,7 +766,7 @@ except Exception as e:
 
 # Single reason question example
 def generate_single_reason_question(question, response):
-    url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason"
+    url = "https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-reason"
     
     payload = {
         "question": question,
@@ -777,7 +798,7 @@ except Exception as e:
 
 # Theme-enhanced API example
 def generate_theme_enhanced_question(question, response, theme_parameters):
-    url = "https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced"
+    url = "https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced"
     
     payload = {
         "question": question,
@@ -853,6 +874,67 @@ try:
 except Exception as e:
     print(f"Error: {e}")
 
+# Theme-enhanced optional API example
+def generate_theme_enhanced_optional_question(question, response, theme_parameters, check_informative=True):
+    url = "https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced-optional"
+    
+    payload = {
+        "question": question,
+        "response": response,
+        "type": "elaboration",
+        "language": "English",
+        "theme": "Yes",
+        "check_informative": check_informative,
+        "theme_parameters": theme_parameters
+    }
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"API Error: {response.status_code}")
+
+# Usage example for theme-enhanced optional API
+try:
+    theme_params = {
+        "themes": [
+            {"name": "communication", "importance": 80},
+            {"name": "leadership", "importance": 60}
+        ]
+    }
+    
+    # With informative detection enabled
+    result = generate_theme_enhanced_optional_question(
+        question="How do you communicate with your team?",
+        response="I use email and Slack for most communications.",
+        theme_parameters=theme_params,
+        check_informative=True
+    )
+    
+    print(f"Informative: {result.get('informative')}")
+    print(f"Question: {result.get('question')}")
+    print(f"Check Informative: {result.get('check_informative')}")
+    
+    # With informative detection disabled (faster)
+    result_fast = generate_theme_enhanced_optional_question(
+        question="How do you communicate with your team?",
+        response="I use email and Slack for most communications.",
+        theme_parameters=theme_params,
+        check_informative=False
+    )
+    
+    print(f"Informative: {result_fast.get('informative')}")
+    print(f"Question: {result_fast.get('question')}")
+    print(f"Check Informative: {result_fast.get('check_informative')}")
+        
+except Exception as e:
+    print(f"Error: {e}")
+
 #### JavaScript/Node.js Example
 ```javascript
 const axios = require('axios');
@@ -860,7 +942,7 @@ const axios = require('axios');
 async function generateFollowupQuestions(question, response) {
     try {
         const apiResponse = await axios.post(
-            'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-followup',
+            'https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-followup',
             {
                 question: question,
                 response: response
@@ -901,7 +983,7 @@ main();
 async function generateSingleReasonQuestion(question, response) {
     try {
         const result = await axios.post(
-            'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-reason',
+            'https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-reason',
             {
                 question: question,
                 response: response
@@ -936,7 +1018,7 @@ generateSingleReasonQuestion(
 async function generateThemeEnhancedQuestion(question, response, themeParameters) {
     try {
         const result = await axios.post(
-            'https://follow-up-question-f00b29aae45c.herokuapp.com/generate-theme-enhanced',
+            'https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced',
             {
                 question: question,
                 response: response,
@@ -1014,7 +1096,74 @@ generateThemeEnhancedQuestion(
 .catch(error => {
     console.error('Error:', error);
 });
-```
+
+// Theme-enhanced optional API example
+async function generateThemeEnhancedOptionalQuestion(question, response, themeParameters, checkInformative = true) {
+    try {
+        const result = await axios.post(
+            'https://followup-ai-questions-e534ed0185cb.herokuapp.com/generate-theme-enhanced-optional',
+            {
+                question: question,
+                response: response,
+                type: "elaboration",
+                language: "English",
+                theme: "Yes",
+                check_informative: checkInformative,
+                theme_parameters: themeParameters
+            },
+            {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        
+        return result.data;
+    } catch (error) {
+        console.error('API Error:', error.response?.data || error.message);
+        throw error;
+    }
+}
+
+// Usage example for theme-enhanced optional API
+const themeParams = {
+    themes: [
+        {name: "communication", importance: 80},
+        {name: "leadership", importance: 60}
+    ]
+};
+
+// With informative detection enabled
+generateThemeEnhancedOptionalQuestion(
+    "How do you communicate with your team?",
+    "I use email and Slack for most communications.",
+    themeParams,
+    true
+)
+.then(result => {
+    console.log(`Informative: ${result.informative}`);
+    console.log(`Question: ${result.question}`);
+    console.log(`Check Informative: ${result.check_informative}`);
+})
+.catch(error => {
+    console.error('Error:', error);
+});
+
+// With informative detection disabled (faster)
+generateThemeEnhancedOptionalQuestion(
+    "How do you communicate with your team?",
+    "I use email and Slack for most communications.",
+    themeParams,
+    false
+)
+.then(result => {
+    console.log(`Informative: ${result.informative}`);
+    console.log(`Question: ${result.question}`);
+    console.log(`Check Informative: ${result.check_informative}`);
+})
+.catch(error => {
+    console.error('Error:', error);
+});
 
 ## 📋 Question Types Reference
 
@@ -1189,6 +1338,7 @@ For technical support or questions about integration:
 - [ ] Test with a sample request: `POST /generate-followup`
 - [ ] Test single reason question: `POST /generate-reason`
 - [ ] Test theme-enhanced API: `POST /generate-theme-enhanced`
+- [ ] Test theme-enhanced optional API: `POST /generate-theme-enhanced-optional`
 - [ ] Choose your integration method (JavaScript, webhooks, etc.)
 - [ ] Implement error handling
 - [ ] Test with real survey data

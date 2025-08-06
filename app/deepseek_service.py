@@ -795,15 +795,56 @@ class OpenAIService:
                     }
             except json.JSONDecodeError:
                 self.logger.warning(f"Failed to parse theme detection response as JSON: {content}")
-                # Fallback: try simple string matching
+                # Fallback: try flexible string matching
                 result_data = None
+                response_lower = response.lower()
+                
+                # Try exact matches first
                 for theme in themes:
-                    if theme["name"].lower() in response.lower():
+                    theme_name_lower = theme["name"].lower()
+                    if theme_name_lower in response_lower:
                         result_data = {
                             "theme_name": theme["name"],
                             "importance": theme["importance"]
                         }
                         break
+                
+                # If no exact match, try partial word matches
+                if not result_data:
+                    for theme in themes:
+                        theme_words = theme["name"].lower().split()
+                        for word in theme_words:
+                            if len(word) > 3 and word in response_lower:  # Only match words longer than 3 chars
+                                result_data = {
+                                    "theme_name": theme["name"],
+                                    "importance": theme["importance"]
+                                }
+                                break
+                        if result_data:
+                            break
+                
+                # If still no match, try semantic word matching
+                if not result_data:
+                    semantic_mappings = {
+                        "collaboration": ["together", "teamwork", "cooperate", "joint", "shared"],
+                        "communication": ["talk", "speak", "discuss", "conversation", "meeting", "email"],
+                        "leadership": ["manage", "lead", "guide", "direct", "supervise", "oversee"],
+                        "teamwork": ["collaborate", "together", "group", "team", "coordinate"],
+                        "innovation": ["creative", "new", "improve", "develop", "design", "invent"]
+                    }
+                    
+                    for theme in themes:
+                        theme_name = theme["name"].lower()
+                        if theme_name in semantic_mappings:
+                            for semantic_word in semantic_mappings[theme_name]:
+                                if semantic_word in response_lower:
+                                    result_data = {
+                                        "theme_name": theme["name"],
+                                        "importance": theme["importance"]
+                                    }
+                                    break
+                        if result_data:
+                            break
             
             self._cache_response(cache_key, result_data)
             return result_data
@@ -815,7 +856,7 @@ class OpenAIService:
     @staticmethod
     def _build_theme_detection_prompt(response: str, themes: list) -> str:
         """
-        Build prompt for theme detection.
+        Build prompt for theme detection with flexible matching.
 
         Args:
             response (str): The user's response to analyze.
@@ -826,13 +867,23 @@ class OpenAIService:
         """
         themes_str = ", ".join([f"'{t['name']}' (importance: {t['importance']}%)" for t in themes])
         
-        return f"""Analyze this response for theme matches:
+        return f"""Analyze this response for theme matches with FLEXIBLE matching:
 
 Response: "{response}"
 
 Available themes: {themes_str}
 
-Look for exact matches or synonyms of the theme names in the response.
+Look for:
+1. EXACT matches: "communication" matches "communication"
+2. PARTIAL matches: "team communication" matches "communication" 
+3. RELATED concepts: "talking to colleagues" matches "communication"
+4. SYNONYMS: "leading the team" matches "leadership"
+5. SEMANTIC similarity: "managing people" matches "leadership"
+6. CONTEXTUAL relevance: "email and meetings" matches "communication"
+7. SEMANTIC WORDS: "work together" matches "collaboration", "teamwork" matches "collaboration"
+
+Be VERY GENEROUS in matching - if the response is even slightly related to a theme, consider it a match.
+Look for semantic relationships, not just exact words.
 
 Return ONLY a JSON object like this:
 {{"theme_name": "theme_name", "importance": importance_number}}
@@ -841,9 +892,11 @@ If no themes are found, return:
 {{"theme_name": "none", "importance": 0}}
 
 Examples:
-- If response contains "communication" and themes include "communication", return {{"theme_name": "communication", "importance": 60}}
-- If response contains "leadership" and themes include "leadership", return {{"theme_name": "leadership", "importance": 80}}
-- If no themes match, return {{"theme_name": "none", "importance": 0}}
+- Response: "I use email and Slack" → matches "communication" (partial match)
+- Response: "I manage a team" → matches "leadership" (semantic match)  
+- Response: "We work together" → matches "collaboration" (semantic words)
+- Response: "I talk to my boss" → matches "communication" (contextual)
+- Response: "We share information" → matches "collaboration" (semantic)
 
 Choose the theme with the highest importance if multiple themes are found."""
 
@@ -976,12 +1029,28 @@ Choose the theme with the highest importance if multiple themes are found."""
         Raises:
             OpenAIAPIError: If there's an error calling the OpenAI API.
         """
-        # If theme is "No", use standard workflow (fast path)
+        # If theme is "No", use standard workflow with optional informativeness detection
         if theme.lower() == "no":
             try:
+                # Check informativeness if requested
+                if check_informative:
+                    is_informative = self.detect_informativeness(question, response, language)
+                    if not is_informative:
+                        return {
+                            "informative": 0,
+                            "question": None,
+                            "explanation": None,
+                            "theme": theme,
+                            "check_informative": check_informative,
+                            "detected_theme": None,
+                            "theme_importance": None,
+                            "highest_importance_theme": None
+                        }
+                
+                # Generate question (either informative detection passed or was skipped)
                 question_text = self.generate_multilingual_question(question, response, question_type, language)
                 return {
-                    "informative": None if not check_informative else 1,
+                    "informative": 1 if check_informative else None,
                     "question": question_text,
                     "explanation": None,
                     "theme": theme,
