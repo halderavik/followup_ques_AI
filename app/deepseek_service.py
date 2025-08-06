@@ -576,6 +576,7 @@ class OpenAIService:
     def detect_informativeness(self, question: str, response: str, language: str = "English") -> bool:
         """
         Detect if a response is informative enough to warrant follow-up questions.
+        Updated to be more lenient - focuses on relevance rather than length.
 
         Args:
             question (str): The original survey question.
@@ -605,16 +606,16 @@ class OpenAIService:
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Analyze if the response is informative. Return ONLY '1' for informative or '0' for non-informative."
+                    "content": f"Analyze if the response is informative. Be GENEROUS in your assessment. If the response is relevant to the question, even if brief, consider it informative. Return ONLY '1' for informative or '0' for non-informative."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.0,  # Zero temperature for fastest, most consistent classification
-            "max_tokens": 5,     # Minimal tokens needed for 1/0 response
-            "top_p": 0.8,
+            "temperature": 0.1,  # Slightly higher temperature for more flexible classification
+            "max_tokens": 10,    # Increased tokens for better reasoning
+            "top_p": 0.9,
             "frequency_penalty": 0.0,
             "presence_penalty": 0.0,
             "stream": False
@@ -658,6 +659,7 @@ class OpenAIService:
     def _build_informativeness_prompt(question: str, response: str, language: str) -> str:
         """
         Build prompt for informativeness detection.
+        Updated to be more lenient - focuses on relevance rather than length.
 
         Args:
             question (str): The original survey question.
@@ -667,22 +669,95 @@ class OpenAIService:
         Returns:
             str: The formatted informativeness detection prompt.
         """
-        # Define non-informative patterns in multiple languages
+        # Define non-informative patterns in multiple languages (comprehensive list)
         non_informative_patterns = {
-            "English": ["i don't know", "i don't know", "no", "yes", "maybe", "not sure", "unsure", "idk", "dunno", "n/a", "none", "nothing"],
-            "Chinese": ["我不知道", "不知道", "不", "是", "也许", "不确定", "不清楚", "没有", "无", "不晓得"],
-            "Japanese": ["わかりません", "知りません", "いいえ", "はい", "たぶん", "わからない", "不明", "なし", "無し"],
-            "Spanish": ["no sé", "no lo sé", "no", "sí", "tal vez", "no estoy seguro", "no estoy segura", "ninguno", "nada"],
-            "French": ["je ne sais pas", "je ne sais pas", "non", "oui", "peut-être", "pas sûr", "pas sûre", "aucun", "rien"],
-            "German": ["ich weiß nicht", "weiß nicht", "nein", "ja", "vielleicht", "nicht sicher", "keiner", "nichts"],
-            "Korean": ["모르겠어요", "모름", "아니요", "네", "아마", "불확실", "없음", "아무것도"]
+            "English": [
+                "i don't know", "idk", "dunno", "n/a", "none", "nothing", "no idea", "not applicable", "skip", "pass",
+                "i don't care", "whatever", "no comment", "no response", "blank", "empty", "no answer",
+                "not sure", "maybe", "possibly", "perhaps", "no preference", "no opinion", "neutral",
+                "don't have one", "haven't thought about it", "no thoughts", "no input", "no feedback",
+                "no experience", "never used", "not familiar", "don't use", "not applicable to me",
+                "doesn't apply", "not relevant", "no interest", "don't care", "indifferent"
+            ],
+            "Chinese": [
+                "我不知道", "不知道", "不晓得", "没有", "无", "跳过", "不适用", "无所谓", "没意见",
+                "不确定", "可能", "也许", "没想法", "没经验", "没用过", "不熟悉", "不关心",
+                "没兴趣", "不相关", "不适用", "没回答", "空白", "没反馈", "没想法"
+            ],
+            "Japanese": [
+                "わかりません", "知りません", "不明", "なし", "無し", "スキップ", "該当なし", "どうでもいい",
+                "意見なし", "わからない", "たぶん", "もしかして", "考えなし", "経験なし", "使ったことない",
+                "不慣れ", "興味なし", "関係ない", "適用外", "回答なし", "空白", "フィードバックなし"
+            ],
+            "Spanish": [
+                "no sé", "no lo sé", "ninguno", "nada", "no idea", "saltar", "no aplica", "no me importa",
+                "no tengo opinión", "no estoy seguro", "tal vez", "quizás", "no tengo preferencia",
+                "no tengo experiencia", "no he usado", "no estoy familiarizado", "no me interesa",
+                "no es relevante", "no aplica a mí", "no tengo comentarios", "en blanco", "sin respuesta"
+            ],
+            "French": [
+                "je ne sais pas", "aucun", "rien", "passer", "ne s'applique pas", "je m'en fiche",
+                "pas d'avis", "pas sûr", "peut-être", "pas de préférence", "pas d'expérience",
+                "jamais utilisé", "pas familier", "pas intéressé", "pas pertinent", "pas applicable",
+                "pas de commentaire", "vide", "sans réponse", "indifférent", "neutre"
+            ],
+            "German": [
+                "ich weiß nicht", "weiß nicht", "keiner", "nichts", "überspringen", "nicht zutreffend",
+                "ist mir egal", "keine Meinung", "nicht sicher", "vielleicht", "keine Präferenz",
+                "keine Erfahrung", "nie benutzt", "nicht vertraut", "nicht interessiert",
+                "nicht relevant", "nicht anwendbar", "kein Kommentar", "leer", "keine Antwort",
+                "gleichgültig", "neutral"
+            ],
+            "Korean": [
+                "모르겠어요", "모름", "없음", "아무것도", "건너뛰기", "해당없음", "상관없어요", "의견없음",
+                "확실하지 않아요", "아마도", "어쩌면", "선호도 없음", "경험 없음", "사용해본 적 없음",
+                "익숙하지 않음", "관심 없음", "관련 없음", "해당 안됨", "댓글 없음", "빈칸", "답변 없음",
+                "무관심", "중립"
+            ]
         }
         
         # Get patterns for the specific language, default to English
         patterns = non_informative_patterns.get(language, non_informative_patterns["English"])
         patterns_str = ", ".join(patterns)
         
-        return f"Question: {question}\nResponse: {response}\n\nIs this response informative enough to ask follow-up questions? Non-informative responses include: {patterns_str}. Return '1' for informative or '0' for non-informative."
+        return f"""Question: {question}
+Response: {response}
+
+Is this response informative enough to ask follow-up questions?
+
+IMPORTANT GUIDELINES:
+- Be GENEROUS in your assessment
+- Focus on RELEVANCE to the question, not length
+- If the response is related to the question topic, consider it informative
+- Even brief responses can be informative if they address the question
+- Only classify as non-informative if the response shows no engagement with the question
+
+Non-informative responses are ONLY: {patterns_str}
+
+Examples of INFORMATIVE responses (even if brief):
+- "Using Business Liability" (addresses business credit preference)
+- "Cost savings" (mentions a reason)
+- "Better tracking" (provides a benefit)
+- "Tax benefits" (gives a specific advantage)
+- "Convenience" (provides a benefit)
+- "Security" (mentions a concern)
+- "Speed" (mentions a preference)
+- "Reliability" (mentions a quality)
+
+Examples of NON-INFORMATIVE responses:
+- "I don't know"
+- "N/A"
+- "Skip"
+- "No idea"
+- "Whatever"
+- "No comment"
+- "Not sure"
+- "Maybe"
+- "No preference"
+- "Don't care"
+- "Indifferent"
+
+Return '1' for informative or '0' for non-informative."""
 
     def generate_enhanced_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> dict:
         """
