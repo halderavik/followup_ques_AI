@@ -253,6 +253,16 @@ class OpenAIService:
                                 question["type"] = question["type"].lower()
                             if isinstance(question, dict) and "text" in question:
                                 question["text"] = self._clean_question_text(question["text"])
+                                
+                                # Validate and fix question type compliance
+                                is_compliant, reason = self._validate_question_type_compliance(question["text"], question["type"])
+                                if not is_compliant:
+                                    self.logger.warning(f"Question type compliance issue for {question['type']}: {reason}")
+                                    # Try to fix the question
+                                    fixed_question = self._fix_overlapping_question(question["text"], question["type"])
+                                    if fixed_question != question["text"]:
+                                        self.logger.info(f"Fixed {question['type']} question: '{question['text']}' -> '{fixed_question}'")
+                                        question["text"] = fixed_question
                         
                         # Ensure we have exactly the expected number of questions with the required types
                         return self._ensure_questions(questions, expected_count, allowed_types)
@@ -274,6 +284,16 @@ class OpenAIService:
                                     question["type"] = question["type"].lower()
                                 if isinstance(question, dict) and "text" in question:
                                     question["text"] = self._clean_question_text(question["text"])
+                                    
+                                    # Validate and fix question type compliance
+                                    is_compliant, reason = self._validate_question_type_compliance(question["text"], question["type"])
+                                    if not is_compliant:
+                                        self.logger.warning(f"Question type compliance issue for {question['type']}: {reason}")
+                                        # Try to fix the question
+                                        fixed_question = self._fix_overlapping_question(question["text"], question["type"])
+                                        if fixed_question != question["text"]:
+                                            self.logger.info(f"Fixed {question['type']} question: '{question['text']}' -> '{fixed_question}'")
+                                            question["text"] = fixed_question
                             
                             # Ensure we have exactly the expected number of questions with the required types
                             return self._ensure_questions(questions, expected_count, allowed_types)
@@ -433,7 +453,7 @@ class OpenAIService:
     @staticmethod
     def build_prompt(question: str, response: str, allowed_types: Optional[list] = None) -> str:
         """
-        Build the prompt for the OpenAI LLM.
+        Build the prompt for the OpenAI LLM with strict type boundaries.
 
         Args:
             question (str): The original survey question.
@@ -441,7 +461,7 @@ class OpenAIService:
             allowed_types (Optional[list]): Allowed follow-up question types.
 
         Returns:
-            str: The formatted prompt.
+            str: The formatted prompt with strict type restrictions.
         """
         # If allowed_types is provided, use those; otherwise use all 6 types
         if allowed_types:
@@ -449,18 +469,218 @@ class OpenAIService:
         else:
             types_to_generate = ['reason', 'clarification', 'elaboration', 'example', 'impact', 'comparison']
         
-        # Build the prompt with the specified types - optimized for speed
-        type_mapping = {
-            'reason': 'ask why',
-            'clarification': 'ask for clarification', 
-            'elaboration': 'ask for more details',
-            'example': 'ask for examples',
-            'impact': 'ask about effects',
-            'comparison': 'ask for comparison'
+        # Build restrictive prompts for each type to prevent overlap
+        type_restrictions = {
+            'reason': 'ask WHY they think/feel this way - focus on motivation and reasoning, NOT examples or details',
+            'clarification': 'ask for CLARIFICATION of unclear terms or concepts - focus on understanding meaning, NOT examples or details', 
+            'elaboration': 'ask for MORE DETAILS about what they said - focus on expanding on their response, NOT examples or comparisons',
+            'example': 'ask for SPECIFIC EXAMPLES or instances - focus on concrete cases, NOT reasons or effects',
+            'impact': 'ask about EFFECTS or CONSEQUENCES - focus on outcomes and results, NOT reasons or examples',
+            'comparison': 'ask for COMPARISON with alternatives - focus on differences and choices, NOT reasons or examples'
         }
         
-        types_text = ", ".join([f"'{t}' ({type_mapping.get(t, t)})" for t in types_to_generate])
-        return f"Q: {question} A: {response}. Generate {len(types_to_generate)} questions: {types_text}. Return JSON: {{\"followups\": [{{\"type\": \"type\", \"text\": \"question\"}}]}}"
+        # Build the restrictive prompt
+        restrictions_text = []
+        for t in types_to_generate:
+            restriction = type_restrictions.get(t, f"ask for {t}")
+            restrictions_text.append(f"'{t}': {restriction}")
+        
+        restrictions_str = "; ".join(restrictions_text)
+        
+        return f"""Q: {question} A: {response}. 
+
+Generate {len(types_to_generate)} follow-up questions with STRICT type boundaries:
+
+{restrictions_str}
+
+IMPORTANT: Each question must stay within its designated type. Do NOT mix types (e.g., don't ask for examples in elaboration questions).
+
+Return JSON: {{"followups": [{{"type": "type", "text": "question"}}]}}"""
+
+    @staticmethod
+    def _build_type_restrictive_prompt(question: str, response: str, question_type: str, language: str = "English") -> str:
+        """
+        Build a highly restrictive prompt for a specific question type to prevent overlap.
+
+        Args:
+            question (str): The original survey question.
+            response (str): The user's answer.
+            question_type (str): The specific type of follow-up question.
+            language (str): The target language.
+
+        Returns:
+            str: The formatted restrictive prompt.
+        """
+        # Define strict boundaries for each question type
+        type_boundaries = {
+            'reason': {
+                'focus': 'WHY they think/feel this way',
+                'avoid': 'examples, details, effects, comparisons',
+                'keywords': ['why', 'reason', 'motivation', 'thinking', 'feeling']
+            },
+            'clarification': {
+                'focus': 'CLARIFY unclear terms or concepts',
+                'avoid': 'examples, details, reasons, effects',
+                'keywords': ['clarify', 'mean', 'understand', 'explain']
+            },
+            'elaboration': {
+                'focus': 'MORE DETAILS about their response',
+                'avoid': 'examples, reasons, effects, comparisons',
+                'keywords': ['details', 'more', 'expand', 'elaborate']
+            },
+            'example': {
+                'focus': 'SPECIFIC EXAMPLES or instances',
+                'avoid': 'reasons, details, effects, comparisons',
+                'keywords': ['example', 'instance', 'case', 'specific']
+            },
+            'impact': {
+                'focus': 'EFFECTS or CONSEQUENCES',
+                'avoid': 'reasons, examples, details, comparisons',
+                'keywords': ['effect', 'impact', 'consequence', 'result']
+            },
+            'comparison': {
+                'focus': 'COMPARISON with alternatives',
+                'avoid': 'reasons, examples, details, effects',
+                'keywords': ['compare', 'versus', 'difference', 'alternative']
+            }
+        }
+        
+        boundary = type_boundaries.get(question_type.lower(), {})
+        focus = boundary.get('focus', question_type)
+        avoid = boundary.get('avoid', 'other types')
+        
+        return f"""Q: {question} A: {response}
+
+Generate 1 {question_type} question in {language}.
+
+FOCUS: {focus}
+AVOID: {avoid}
+
+The question must ONLY ask for {question_type} content. Do NOT ask for examples, reasons, effects, or comparisons unless that is the specific type requested.
+
+Return only the question text."""
+
+    def _validate_question_type_compliance(self, question_text: str, question_type: str) -> tuple[bool, str]:
+        """
+        Validate that a generated question complies with its designated type.
+
+        Args:
+            question_text (str): The generated question text.
+            question_type (str): The expected question type.
+
+        Returns:
+            tuple[bool, str]: (is_compliant, reason_if_not_compliant)
+        """
+        question_lower = question_text.lower()
+        
+        # Define forbidden keywords for each type
+        forbidden_keywords = {
+            'reason': ['example', 'instance', 'case', 'specific case', 'such as', 'like when'],
+            'clarification': ['example', 'instance', 'case', 'effect', 'impact', 'consequence'],
+            'elaboration': ['example', 'instance', 'case', 'such as', 'like when', 'compare', 'versus'],
+            'example': ['why', 'reason', 'effect', 'impact', 'consequence', 'compare', 'versus'],
+            'impact': ['example', 'instance', 'case', 'why', 'reason', 'compare', 'versus'],
+            'comparison': ['example', 'instance', 'case', 'why', 'reason', 'effect', 'impact']
+        }
+        
+        # Check for forbidden keywords
+        forbidden = forbidden_keywords.get(question_type.lower(), [])
+        for keyword in forbidden:
+            if keyword in question_lower:
+                return False, f"Contains forbidden keyword '{keyword}' for {question_type} type"
+        
+        # Check for required keywords/patterns
+        required_patterns = {
+            'reason': ['why', 'reason', 'think', 'feel'],
+            'clarification': ['clarify', 'mean', 'understand', 'explain'],
+            'elaboration': ['more', 'details', 'expand', 'elaborate'],
+            'example': ['example', 'instance', 'case', 'specific'],
+            'impact': ['effect', 'impact', 'consequence', 'result'],
+            'comparison': ['compare', 'versus', 'difference', 'alternative']
+        }
+        
+        required = required_patterns.get(question_type.lower(), [])
+        has_required = any(pattern in question_lower for pattern in required)
+        
+        if not has_required:
+            return False, f"Missing required keywords for {question_type} type"
+        
+        return True, "Compliant"
+
+    def _fix_overlapping_question(self, question_text: str, question_type: str) -> str:
+        """
+        Attempt to fix a question that overlaps with other types.
+
+        Args:
+            question_text (str): The original question text.
+            question_type (str): The expected question type.
+
+        Returns:
+            str: The fixed question text.
+        """
+        question_lower = question_text.lower()
+        
+        # Define replacement patterns for each type
+        replacements = {
+            'reason': {
+                'example': 'reason',
+                'instance': 'reason',
+                'case': 'reason',
+                'such as': 'because',
+                'like when': 'because'
+            },
+            'clarification': {
+                'example': 'clarification',
+                'instance': 'clarification',
+                'case': 'clarification',
+                'effect': 'meaning',
+                'impact': 'meaning'
+            },
+            'elaboration': {
+                'example': 'details',
+                'instance': 'details',
+                'case': 'details',
+                'such as': 'specifically',
+                'like when': 'specifically',
+                'compare': 'expand on'
+            },
+            'example': {
+                'why': 'what',
+                'reason': 'instance',
+                'effect': 'example',
+                'impact': 'example',
+                'compare': 'example'
+            },
+            'impact': {
+                'example': 'effect',
+                'instance': 'effect',
+                'case': 'effect',
+                'why': 'how',
+                'reason': 'result',
+                'compare': 'effect'
+            },
+            'comparison': {
+                'example': 'alternative',
+                'instance': 'alternative',
+                'case': 'alternative',
+                'why': 'how',
+                'reason': 'difference',
+                'effect': 'difference'
+            }
+        }
+        
+        # Apply replacements
+        fixed_text = question_text
+        replacements_dict = replacements.get(question_type.lower(), {})
+        
+        for old_word, new_word in replacements_dict.items():
+            if old_word in question_lower:
+                # Replace the word while preserving case
+                import re
+                pattern = re.compile(re.escape(old_word), re.IGNORECASE)
+                fixed_text = pattern.sub(new_word, fixed_text)
+        
+        return fixed_text
 
     def generate_multilingual_question(self, question: str, response: str, question_type: str, language: str) -> str:
         """
@@ -528,6 +748,16 @@ class OpenAIService:
                 # Clean up the response (remove quotes, extra whitespace)
                 question_text = content.strip().strip('"').strip("'")
                 
+                # Validate and fix question type compliance
+                is_compliant, reason = self._validate_question_type_compliance(question_text, question_type)
+                if not is_compliant:
+                    self.logger.warning(f"Question type compliance issue: {reason}")
+                    # Try to fix the question
+                    fixed_question = self._fix_overlapping_question(question_text, question_type)
+                    if fixed_question != question_text:
+                        self.logger.info(f"Fixed question: '{question_text}' -> '{fixed_question}'")
+                        question_text = fixed_question
+                
                 # Cache the response
                 self._cache_response(cache_key, question_text)
                 
@@ -546,7 +776,7 @@ class OpenAIService:
     @staticmethod
     def _build_multilingual_prompt(question: str, response: str, question_type: str, language: str) -> str:
         """
-        Build optimized prompt for multilingual question generation.
+        Build optimized prompt for multilingual question generation with strict type boundaries.
 
         Args:
             question (str): The original survey question (in the target language).
@@ -555,23 +785,50 @@ class OpenAIService:
             language (str): The target language.
 
         Returns:
-            str: The formatted multilingual prompt.
+            str: The formatted multilingual prompt with type restrictions.
         """
-        # Ultra-minimal prompt for fastest multilingual generation
-        type_instructions = {
-            "reason": "why",
-            "impact": "effects", 
-            "elaboration": "details",
-            "example": "examples",
-            "clarification": "clarify",
-            "comparison": "compare"
+        # Define strict type boundaries for multilingual generation
+        type_boundaries = {
+            "reason": {
+                "focus": "why they think/feel this way",
+                "avoid": "examples, details, effects, comparisons"
+            },
+            "impact": {
+                "focus": "effects or consequences", 
+                "avoid": "reasons, examples, details, comparisons"
+            },
+            "elaboration": {
+                "focus": "more details about their response",
+                "avoid": "examples, reasons, effects, comparisons"
+            },
+            "example": {
+                "focus": "specific examples or instances",
+                "avoid": "reasons, details, effects, comparisons"
+            },
+            "clarification": {
+                "focus": "clarify unclear terms or concepts",
+                "avoid": "examples, details, reasons, effects"
+            },
+            "comparison": {
+                "focus": "compare with alternatives",
+                "avoid": "reasons, examples, details, effects"
+            }
         }
         
-        instruction = type_instructions.get(question_type.lower(), "follow-up")
+        boundary = type_boundaries.get(question_type.lower(), {})
+        focus = boundary.get("focus", question_type)
+        avoid = boundary.get("avoid", "other types")
         
-        # Since question and response are already in the target language,
-        # we just need to ask for a follow-up question in the same language
-        return f"Q: {question} A: {response}. Ask {instruction} in {language}."
+        return f"""Q: {question} A: {response}
+
+Generate 1 {question_type} question in {language}.
+
+FOCUS: {focus}
+AVOID: {avoid}
+
+The question must ONLY ask for {question_type} content. Do NOT ask for examples, reasons, effects, or comparisons unless that is the specific type requested.
+
+Return only the question text."""
 
     def detect_informativeness(self, question: str, response: str, language: str = "English") -> bool:
         """
