@@ -2,9 +2,25 @@
 
 ## Overview
 
-The Survey Intelligence API generates intelligent follow-up questions for open-ended survey responses using advanced AI. This API is designed to integrate seamlessly with survey platforms like **Qualtrics**, **SurveyMonkey**, and other survey tools to enhance data collection and respondent engagement.
+The Survey Intelligence API generates intelligent follow-up questions for open-ended survey responses using advanced AI with **non-overlapping question types** and **intelligent validation**. This API is designed to integrate seamlessly with survey platforms like **Qualtrics**, **SurveyMonkey**, and other survey tools to enhance data collection and respondent engagement.
 
 **Live API URL**: `https://followup-ai-questions-e534ed0185cb.herokuapp.com/`
+
+## 🆕 Key Features
+
+### Non-Overlapping Question Types
+- **Strict type boundaries** - Each question type has clear, non-overlapping definitions
+- **Automatic validation** - Questions are validated for type compliance after generation
+- **Intelligent fixing** - Non-compliant questions are automatically corrected
+- **Type-specific keywords** - Each type uses appropriate keywords and avoids forbidden terms
+
+### Question Type Definitions
+- **Reason**: Focuses on WHY they think/feel this way (avoids examples, details, effects)
+- **Clarification**: CLARIFIES unclear terms or concepts (avoids examples, details, reasons)
+- **Elaboration**: Asks for MORE DETAILS about their response (avoids examples, reasons, effects)
+- **Example**: Requests SPECIFIC EXAMPLES or instances (avoids reasons, details, effects)
+- **Impact**: Explores EFFECTS or CONSEQUENCES (avoids reasons, examples, details)
+- **Comparison**: Asks for COMPARISON with alternatives (avoids reasons, examples, details)
 
 ## 🎯 Use Cases
 
@@ -87,14 +103,14 @@ Returns all supported question types for follow-up generation.
 ### 4. Generate Follow-up Questions
 **POST** `/generate-followup`
 
-Generates intelligent follow-up questions for survey responses. By default, generates all 6 question types, but you can specify which types to include using the `allowed_types` parameter.
+Generates intelligent follow-up questions for survey responses with **strict type adherence**. By default, generates all 6 question types, but you can specify which types to include using the `allowed_types` parameter. All questions are validated and automatically corrected for type compliance.
 
 **Request Body:**
 ```json
 {
   "question": "What challenges do you face at work?",
   "response": "I struggle with time management and communication with my team.",
-  "allowed_types": ["reason", "example", "impact"]
+  "allowed_types": ["reason", "elaboration", "impact"]
 }
 ```
 
@@ -107,8 +123,8 @@ Generates intelligent follow-up questions for survey responses. By default, gene
       "type": "reason"
     },
     {
-      "text": "Can you give examples of when time management and communication issues arise?",
-      "type": "example"
+      "text": "Can you tell me more about your time management and communication challenges?",
+      "type": "elaboration"
     },
     {
       "text": "How do these challenges impact your work performance and team dynamics?",
@@ -181,14 +197,14 @@ Generates a single reason-based follow-up question for deeper understanding.
 ### 6. Generate Multilingual Question
 **POST** `/generate-multilingual`
 
-Generates a single follow-up question in the specified language. The original question and response should be in the same language as the target language.
+Generates a single follow-up question in the specified language with **strict type compliance**. The original question and response should be in the same language as the target language. All questions are validated and automatically corrected for type adherence.
 
 **Request Body:**
 ```json
 {
   "question": "你在工作中面临什么挑战？",
   "response": "我在时间管理和沟通方面有困难。",
-  "type": "reason",
+  "type": "elaboration",
   "language": "Chinese"
 }
 ```
@@ -196,7 +212,7 @@ Generates a single follow-up question in the specified language. The original qu
 **Response:**
 ```json
 {
-  "question": "为什么你觉得时间管理和沟通对你来说是挑战呢？",
+  "question": "你能详细说说你在时间管理和沟通方面遇到的具体困难吗？",
   "original_question": "你在工作中面临什么挑战？",
   "original_response": "我在时间管理和沟通方面有困难。",
   "type": "reason",
@@ -1258,6 +1274,32 @@ generateThemeEnhancedOptionalQuestion(
 - Detected theme: "leadership" (90% importance)
 - Generated impact-focused question
 - Provided explanation for question generation
+
+## 🆕 Recent Updates & Enhancements
+
+### Non-Overlapping Question Types Implementation
+- **Strict type boundaries** implemented across all endpoints
+- **Automatic validation** of generated questions for type compliance
+- **Intelligent fixing** of non-compliant questions
+- **Enhanced prompt engineering** with type-specific restrictions
+
+### Validation and Fixing Logic
+- **Post-generation validation** ensures questions adhere to their specified type
+- **Automatic keyword replacement** for forbidden terms (e.g., "specifically" → "in detail" for elaboration)
+- **Type-specific forbidden keywords** prevent overlap between question types
+- **Real-time correction** without requiring regeneration
+
+### Enhanced Endpoints
+- **All endpoints** now use strict type boundaries
+- **Theme-enhanced endpoints** updated with validation logic
+- **Multilingual endpoints** include type compliance checking
+- **Improved error handling** for validation failures
+
+### Technical Improvements
+- **Python 3.11** compatibility with `.python-version` specification
+- **Directory cleanup** - removed temporary test files
+- **Enhanced logging** for validation and fixing operations
+- **Performance optimization** with improved prompt structures
 
 ## ⚠️ Error Handling
 

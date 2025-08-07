@@ -8,6 +8,8 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
 - **Exactly 3 follow-up questions** with specific types: Reason, Example, Impact
 - **Enhanced multilingual support** with informativeness detection
 - **🆕 Theme-enhanced analysis** - detects themes in responses and generates contextually relevant questions
+- **🆕 Non-overlapping question types** - strict adherence to question type boundaries (elaboration questions never contain examples)
+- **🆕 Intelligent validation and fixing** - automatic detection and correction of question type compliance issues
 - **Informativeness detection** - automatically detects non-informative responses (e.g., "I don't know", "no")
 - **Theme detection and ranking** - identifies themes by importance and generates targeted questions
 - Simple REST API (JSON)
@@ -18,7 +20,7 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
 - Support for multiple languages (English, Chinese, Japanese, Spanish, French, German, Korean)
 
 ## Tech Stack
-- Python 3.9+
+- Python 3.11
 - Flask 2.3.3
 - Pydantic 2.4.2
 - Requests 2.31.0
@@ -83,15 +85,16 @@ This project is a Flask-based REST API that generates intelligent follow-up ques
   - `models.py` - Pydantic data models
   - `question_types.py` - Question type enums
   - `error_models.py` - Error response models
-  - `deepseek_service.py` - OpenAI LLM integration (OpenAIService class)
+  - `deepseek_service.py` - OpenAI LLM integration with validation and fixing logic
   - `log_config.py` - Logging configuration
 - `tests/` - Unit and integration tests
 - `requirements.txt` - Python dependencies
 - `.env` - Environment variables (OpenAI API key)
+- `.python-version` - Python version specification for Heroku
 - `README.md` - Project documentation
+- `API.md` - Comprehensive API documentation
 - `Survey_Intelligence_API.postman_collection.json` - Postman collection
 - `POSTMAN_TESTING_GUIDE.md` - Testing guide
-- `run_tests.py` - Custom test runner
 
 ## API Endpoints
 
@@ -105,13 +108,14 @@ Health check endpoint. Returns `{"status": "ok"}`.
 Returns all supported follow-up question types.
 
 ### POST `/generate-followup`
-Generates exactly 3 intelligent follow-up questions based on survey responses with specific types: Reason, Example, and Impact.
+Generates intelligent follow-up questions based on survey responses with strict type adherence. Supports all 6 question types with non-overlapping boundaries.
 
 **Request Body:**
 ```json
 {
   "question": "What did you think of our service?",
-  "response": "The service was good but could be faster."
+  "response": "The service was good but could be faster.",
+  "allowed_types": ["reason", "elaboration", "impact"]
 }
 ```
 
@@ -124,8 +128,8 @@ Generates exactly 3 intelligent follow-up questions based on survey responses wi
       "type": "reason"
     },
     {
-      "text": "Can you give examples of when the service felt slow?",
-      "type": "example"
+      "text": "Can you tell me more about what aspects of the service felt slow?",
+      "type": "elaboration"
     },
     {
       "text": "How did the speed of the service impact your overall experience?",
@@ -136,14 +140,14 @@ Generates exactly 3 intelligent follow-up questions based on survey responses wi
 ```
 
 ### POST `/generate-multilingual`
-Generates a single follow-up question in the specified language.
+Generates a single follow-up question in the specified language with strict type compliance.
 
 **Request Body:**
 ```json
 {
   "question": "What challenges do you face at work?",
   "response": "I struggle with time management.",
-  "type": "reason",
+  "type": "elaboration",
   "language": "English"
 }
 ```
@@ -151,23 +155,23 @@ Generates a single follow-up question in the specified language.
 **Response:**
 ```json
 {
-  "question": "Why do you struggle with time management?",
+  "question": "Can you tell me more about your time management challenges at work?",
   "original_question": "What challenges do you face at work?",
   "original_response": "I struggle with time management.",
-  "type": "reason",
+  "type": "elaboration",
   "language": "English"
 }
 ```
 
 ### POST `/generate-enhanced-multilingual`
-Generates a single follow-up question in the specified language with informativeness detection. If the response is non-informative, no question is generated.
+Generates a single follow-up question in the specified language with informativeness detection and type validation.
 
 **Request Body:**
 ```json
 {
   "question": "What challenges do you face at work?",
   "response": "I don't know",
-  "type": "reason",
+  "type": "elaboration",
   "language": "English"
 }
 ```
@@ -179,7 +183,7 @@ Generates a single follow-up question in the specified language with informative
   "question": null,
   "original_question": "What challenges do you face at work?",
   "original_response": "I don't know",
-  "type": "reason",
+  "type": "elaboration",
   "language": "English"
 }
 ```
@@ -188,16 +192,16 @@ Generates a single follow-up question in the specified language with informative
 ```json
 {
   "informative": 1,
-  "question": "Why do you struggle with time management?",
+  "question": "Can you tell me more about your time management challenges at work?",
   "original_question": "What challenges do you face at work?",
   "original_response": "I struggle with time management.",
-  "type": "reason",
+  "type": "elaboration",
   "language": "English"
 }
 ```
 
 ### 🆕 POST `/generate-theme-enhanced`
-**NEW!** Generates a theme-enhanced multilingual follow-up question with intelligent theme analysis. Detects themes in responses and generates contextually relevant questions based on theme importance.
+**NEW!** Generates a theme-enhanced multilingual follow-up question with intelligent theme analysis and strict type compliance.
 
 **Request Body (Theme Analysis Enabled):**
 ```json
@@ -221,7 +225,7 @@ Generates a single follow-up question in the specified language with informative
 ```json
 {
   "informative": 1,
-  "question": "Can you give an example of a situation where face-to-face meetings were more effective than digital communication for your team?",
+  "question": "Can you tell me more about when face-to-face meetings are more effective than digital communication for your team?",
   "explanation": "This question focuses on the theme of 'communication' by asking the user to elaborate on their preference for face-to-face interactions...",
   "original_question": "How do you communicate with your team?",
   "original_response": "I use email and Slack for most communications, but sometimes face-to-face meetings are more effective.",
@@ -234,57 +238,48 @@ Generates a single follow-up question in the specified language with informative
 }
 ```
 
-**Request Body (Standard Mode - No Theme Analysis):**
-```json
-{
-  "question": "What challenges do you face at work?",
-  "response": "I struggle with time management and communication.",
-  "type": "reason",
-  "language": "English",
-  "theme": "No"
-}
-```
+### 🆕 POST `/generate-theme-enhanced-optional`
+**NEW!** Theme-enhanced API with optional informativeness checking and enhanced type validation.
 
-**Response (Standard Mode):**
+**Request Body:**
 ```json
 {
-  "informative": 1,
-  "question": "Why do you struggle with time management and communication at work?",
-  "explanation": null,
-  "original_question": "What challenges do you face at work?",
-  "original_response": "I struggle with time management and communication.",
-  "type": "reason",
-  "language": "English",
-  "theme": "No",
-  "detected_theme": null,
-  "theme_importance": null,
-  "highest_importance_theme": null
-}
-```
-
-**Response (No Theme Found - Uses Highest Importance Theme):**
-```json
-{
-  "informative": 1,
-  "question": "Do you think the calming effect of blue relates to how it might influence communication or social interactions?",
-  "explanation": "This question gently introduces the missing theme of 'communication' by connecting it to the user's stated preference...",
-  "original_question": "What's your favorite color?",
-  "original_response": "I like blue because it's calming.",
-  "type": "reason",
+  "question": "What are the main reasons you prefer to use your business credit?",
+  "response": "helps with the credit score",
+  "type": "elaboration",
   "language": "English",
   "theme": "Yes",
-  "detected_theme": null,
-  "theme_importance": null,
-  "highest_importance_theme": "communication"
+  "check_informative": false,
+  "theme_parameters": {
+    "themes": [
+      {"name": "To Keep Business or Personal Expenses Separate", "importance": 80},
+      {"name": "Helps To Build Business Credit or Reputation", "importance": 60}
+    ]
+  }
 }
 ```
 
-## 🎯 Theme-Enhanced API Features
+## 🎯 Enhanced Features
+
+### Non-Overlapping Question Types
+- **Strict type boundaries** - Each question type has clear, non-overlapping definitions
+- **Automatic validation** - Questions are validated for type compliance after generation
+- **Intelligent fixing** - Non-compliant questions are automatically corrected
+- **Type-specific keywords** - Each type uses appropriate keywords and avoids forbidden terms
+
+### Question Type Definitions
+- **Reason**: Focuses on WHY they think/feel this way (avoids examples, details, effects)
+- **Clarification**: CLARIFIES unclear terms or concepts (avoids examples, details, reasons)
+- **Elaboration**: Asks for MORE DETAILS about their response (avoids examples, reasons, effects)
+- **Example**: Requests SPECIFIC EXAMPLES or instances (avoids reasons, details, effects)
+- **Impact**: Explores EFFECTS or CONSEQUENCES (avoids reasons, examples, details)
+- **Comparison**: Asks for COMPARISON with alternatives (avoids reasons, examples, details)
 
 ### Theme Detection
 - Automatically detects themes in survey responses
 - Ranks themes by importance (0-100%)
 - Generates questions based on detected themes
+- Provides graceful fallback when no themes are found
 
 ### Missing Theme Handling
 - When no themes are found, asks about highest importance theme
@@ -311,10 +306,22 @@ Generates a single follow-up question in the specified language with informative
 - Korean (한국어)
 
 ## Testing
-Run comprehensive tests for the theme-enhanced API:
+Run the comprehensive test suite:
 ```bash
-python test_theme_api_comprehensive.py
+# Run all tests
+python -m pytest tests/
+
+# Run specific test files
+python -m pytest tests/test_api.py
+python -m pytest tests/test_deepseek_service.py
 ```
+
+## Recent Updates
+- ✅ **Non-overlapping question types** - Strict adherence to question type boundaries
+- ✅ **Enhanced validation and fixing** - Automatic detection and correction of compliance issues
+- ✅ **Improved prompt engineering** - Updated all endpoints with strict type boundaries
+- ✅ **Directory cleanup** - Removed temporary test files and documentation
+- ✅ **Python version management** - Migrated to `.python-version` for Heroku compatibility
 
 ## License
 MIT (or specify as appropriate) 
