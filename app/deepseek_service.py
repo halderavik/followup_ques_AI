@@ -1581,6 +1581,12 @@ Choose the theme with the highest importance if multiple themes are found."""
         # Clean the question text
         question_text = self._clean_question_text(question_text)
         
+        # Validate and fix question type compliance
+        is_compliant, reason = self._validate_question_type_compliance(question_text, question_type)
+        if not is_compliant:
+            self.logger.warning(f"Question type compliance issue: {reason}")
+            question_text = self._fix_overlapping_question(question_text, question_type)
+        
         result_data = {"question": question_text, "explanation": explanation}
         self._cache_response(cache_key, result_data)
         return result_data
@@ -1653,6 +1659,12 @@ Explanation: [Explain how this question addresses the missing theme]"""
         
         # Clean the question text
         question_text = self._clean_question_text(question_text)
+        
+        # Validate and fix question type compliance (missing theme questions are typically reason type)
+        is_compliant, reason = self._validate_question_type_compliance(question_text, "reason")
+        if not is_compliant:
+            self.logger.warning(f"Question type compliance issue: {reason}")
+            question_text = self._fix_overlapping_question(question_text, "reason")
         
         result_data = {"question": question_text, "explanation": explanation}
         self._cache_response(cache_key, result_data)
