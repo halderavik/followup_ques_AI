@@ -469,23 +469,49 @@ class OpenAIService:
         else:
             types_to_generate = ['reason', 'clarification', 'elaboration', 'example', 'impact', 'comparison']
         
-        # Build restrictive prompts for each type to prevent overlap
-        type_restrictions = {
-            'reason': 'ask WHY they think/feel this way - focus on motivation and reasoning, NOT examples or details',
-            'clarification': 'ask for CLARIFICATION of unclear terms or concepts - focus on understanding meaning, NOT examples or details', 
-            'elaboration': 'ask for MORE DETAILS about what they said - focus on expanding on their response, NOT examples or comparisons',
-            'example': 'ask for SPECIFIC EXAMPLES or instances - focus on concrete cases, NOT reasons or effects',
-            'impact': 'ask about EFFECTS or CONSEQUENCES - focus on outcomes and results, NOT reasons or examples',
-            'comparison': 'ask for COMPARISON with alternatives - focus on differences and choices, NOT reasons or examples'
+        # Define strict boundaries for each question type (non-overlapping)
+        type_boundaries = {
+            'reason': {
+                'focus': 'WHY they think/feel this way about the response',
+                'avoid': 'examples, details, effects, comparisons',
+                'keywords': ['why', 'reason', 'motivation', 'thinking', 'feeling']
+            },
+            'clarification': {
+                'focus': 'CLARIFY unclear terms or concepts in the response',
+                'avoid': 'examples, details, reasons, effects',
+                'keywords': ['clarify', 'mean', 'understand', 'explain']
+            },
+            'elaboration': {
+                'focus': 'MORE DETAILS about their response',
+                'avoid': 'examples, reasons, effects, comparisons',
+                'keywords': ['details', 'more', 'expand', 'elaborate']
+            },
+            'example': {
+                'focus': 'SPECIFIC EXAMPLES or instances of what they mentioned',
+                'avoid': 'reasons, details, effects, comparisons',
+                'keywords': ['example', 'instance', 'case', 'specific']
+            },
+            'impact': {
+                'focus': 'EFFECTS or CONSEQUENCES of what they mentioned',
+                'avoid': 'reasons, examples, details, comparisons',
+                'keywords': ['effect', 'impact', 'consequence', 'result']
+            },
+            'comparison': {
+                'focus': 'COMPARISON with alternatives to what they mentioned',
+                'avoid': 'reasons, examples, details, effects',
+                'keywords': ['compare', 'versus', 'difference', 'alternative']
+            }
         }
         
         # Build the restrictive prompt
         restrictions_text = []
         for t in types_to_generate:
-            restriction = type_restrictions.get(t, f"ask for {t}")
-            restrictions_text.append(f"'{t}': {restriction}")
+            boundary = type_boundaries.get(t.lower(), {})
+            focus = boundary.get('focus', f"ask for {t}")
+            avoid = boundary.get('avoid', 'other types')
+            restrictions_text.append(f"'{t}': FOCUS: {focus}; AVOID: {avoid}")
         
-        restrictions_str = "; ".join(restrictions_text)
+        restrictions_str = "\n".join(restrictions_text)
         
         return f"""Q: {question} A: {response}. 
 
