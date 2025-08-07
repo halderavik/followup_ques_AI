@@ -1662,7 +1662,7 @@ Explanation: [Explain how this question addresses the missing theme]"""
     def _build_theme_question_prompt(question: str, response: str, question_type: str, 
                                    language: str, theme_name: str, theme_importance: int) -> str:
         """
-        Build prompt for theme-based question generation.
+        Build prompt for theme-based question generation with non-overlapping logic.
 
         Args:
             question (str): The original survey question.
@@ -1675,15 +1675,43 @@ Explanation: [Explain how this question addresses the missing theme]"""
         Returns:
             str: The formatted prompt for theme-based question generation.
         """
-        type_descriptions = {
-            "reason": "ask for the reason or cause",
-            "impact": "ask about the impact or consequences",
-            "elaboration": "ask for more details or examples",
-            "clarification": "ask for clarification",
-            "comparison": "ask for comparison"
+        # Define strict boundaries for each question type (non-overlapping)
+        type_boundaries = {
+            'reason': {
+                'focus': 'WHY they think/feel this way about the theme',
+                'avoid': 'examples, details, effects, comparisons',
+                'keywords': ['why', 'reason', 'motivation', 'thinking', 'feeling']
+            },
+            'clarification': {
+                'focus': 'CLARIFY unclear terms or concepts related to the theme',
+                'avoid': 'examples, details, reasons, effects',
+                'keywords': ['clarify', 'mean', 'understand', 'explain']
+            },
+            'elaboration': {
+                'focus': 'MORE DETAILS about their response regarding the theme',
+                'avoid': 'examples, reasons, effects, comparisons',
+                'keywords': ['details', 'more', 'expand', 'elaborate']
+            },
+            'example': {
+                'focus': 'SPECIFIC EXAMPLES or instances of the theme',
+                'avoid': 'reasons, details, effects, comparisons',
+                'keywords': ['example', 'instance', 'case', 'specific']
+            },
+            'impact': {
+                'focus': 'EFFECTS or CONSEQUENCES of the theme',
+                'avoid': 'reasons, examples, details, comparisons',
+                'keywords': ['effect', 'impact', 'consequence', 'result']
+            },
+            'comparison': {
+                'focus': 'COMPARISON with alternatives related to the theme',
+                'avoid': 'reasons, examples, details, effects',
+                'keywords': ['compare', 'versus', 'difference', 'alternative']
+            }
         }
         
-        type_desc = type_descriptions.get(question_type.lower(), "ask a relevant follow-up")
+        boundary = type_boundaries.get(question_type.lower(), {})
+        focus = boundary.get('focus', f"ask about {question_type}")
+        avoid = boundary.get('avoid', 'other types')
         
         return f"""Original Question: {question}
 User Response: {response}
@@ -1692,8 +1720,10 @@ Detected Theme: {theme_name} (importance: {theme_importance}%)
 
 Generate a follow-up question in {language} that:
 1. Focuses specifically on the theme '{theme_name}'
-2. Uses the question type '{question_type}' ({type_desc})
-3. Is relevant to the user's response
+2. Uses the question type '{question_type}'
+3. FOCUS: {focus}
+4. AVOID: {avoid}
+5. The question must ONLY ask for {question_type} content related to the theme
 
 Return in this format:
 Question: [Your question here]
