@@ -601,12 +601,12 @@ Return only the question text."""
         
         # Define forbidden keywords for each type
         forbidden_keywords = {
-            'reason': ['example', 'instance', 'case', 'specific case', 'such as', 'like when'],
-            'clarification': ['example', 'instance', 'case', 'effect', 'impact', 'consequence'],
-            'elaboration': ['example', 'instance', 'case', 'such as', 'like when', 'compare', 'versus'],
+            'reason': ['example', 'instance', 'case', 'specific case', 'such as', 'like when', 'specifically'],
+            'clarification': ['example', 'instance', 'case', 'effect', 'impact', 'consequence', 'specifically'],
+            'elaboration': ['example', 'instance', 'case', 'such as', 'like when', 'compare', 'versus', 'specifically'],
             'example': ['why', 'reason', 'effect', 'impact', 'consequence', 'compare', 'versus'],
-            'impact': ['example', 'instance', 'case', 'why', 'reason', 'compare', 'versus'],
-            'comparison': ['example', 'instance', 'case', 'why', 'reason', 'effect', 'impact']
+            'impact': ['example', 'instance', 'case', 'why', 'reason', 'compare', 'versus', 'specifically'],
+            'comparison': ['example', 'instance', 'case', 'why', 'reason', 'effect', 'impact', 'specifically']
         }
         
         # Check for forbidden keywords
@@ -653,22 +653,25 @@ Return only the question text."""
                 'instance': 'reason',
                 'case': 'reason',
                 'such as': 'because',
-                'like when': 'because'
+                'like when': 'because',
+                'specifically': 'in particular'
             },
             'clarification': {
                 'example': 'clarification',
                 'instance': 'clarification',
                 'case': 'clarification',
                 'effect': 'meaning',
-                'impact': 'meaning'
+                'impact': 'meaning',
+                'specifically': 'precisely'
             },
             'elaboration': {
                 'example': 'details',
                 'instance': 'details',
                 'case': 'details',
-                'such as': 'specifically',
-                'like when': 'specifically',
-                'compare': 'expand on'
+                'such as': 'in detail',
+                'like when': 'in detail',
+                'compare': 'expand on',
+                'specifically': 'in detail'
             },
             'example': {
                 'why': 'what',
@@ -683,7 +686,8 @@ Return only the question text."""
                 'case': 'effect',
                 'why': 'how',
                 'reason': 'result',
-                'compare': 'effect'
+                'compare': 'effect',
+                'specifically': 'particularly'
             },
             'comparison': {
                 'example': 'alternative',
@@ -691,7 +695,8 @@ Return only the question text."""
                 'case': 'alternative',
                 'why': 'how',
                 'reason': 'difference',
-                'effect': 'difference'
+                'effect': 'difference',
+                'specifically': 'particularly'
             }
         }
         
